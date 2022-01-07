@@ -6,51 +6,46 @@ BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
+ifndef NCPU
+NCPU := 2
+endif
+
+QEMU_ARGS = -machine virt \
+            -nographic \
+            -bios default \
+            -device loader,file=$(BIN_FILE),addr=0x80200000 \
+			-smp $(NCPU)
+
 .PHONY: doc kernel build clean qemu run dtc debug
 
-# 默认 build 为输出二进制文件
 build: $(BIN_FILE) 
 
-# 通过 Rust 文件中的注释生成 os 的文档
 doc:
 	@cargo doc --document-private-items
 
-# 编译 kernel
 kernel:
 	@cargo build
 
-# 生成 kernel 的二进制文件
 $(BIN_FILE): kernel
 	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $@
 
-# 查看反汇编结果
 asm:
 	@$(OBJDUMP) -d $(KERNEL_FILE) | less
 
-# 清理编译出的文件
 clean:
 	@cargo clean
 
-# 运行 QEMU
+# run qemu
 qemu: build
-	@qemu-system-riscv64 \
-            -machine virt \
-            -nographic \
-            -bios default \
-            -device loader,file=$(BIN_FILE),addr=0x80200000 \
-			-smp 2
+	@qemu-system-riscv64 $(QEMU_ARGS)
 
+# run qemu in debug mode
 debug: build
-	@qemu-system-riscv64 \
-            -machine virt \
-            -nographic \
-            -bios default \
-            -device loader,file=$(BIN_FILE),addr=0x80200000 \
-			-smp 2 \
-			-s -S
+	@qemu-system-riscv64 -s -S $(QEMU_ARGS)
 
+# generate dts from dtb
 dtc:
 	dtc -o dump.dts -O dts -I dtb dump.dtb
 
-# 一键运行
+# build and run with qemu
 run: build qemu
