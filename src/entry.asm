@@ -14,7 +14,7 @@ _start:
 
     # relocate to virtual address
     la t0, relocated
-    li t1, 0xffffffffc0200000 - 0x80200000
+    li t1, 0xffffffc080200000 - 0x80200000
     add t0, t0, t1
     jr t0
 
@@ -56,9 +56,9 @@ boot_stack_top:
 boot_page_table:
     .quad 0
     .quad 0
-    # 第 2 项：0x8000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
+    # Item 2：0x8000_0000 -> 0x8000_0000 (1G), 0xcf means VRWXAD
     .quad (0x80000 << 10) | 0xcf
-    .zero 508 * 8
-    # 第 511 项：0xffff_ffff_c000_0000 -> 0x8000_0000，0xcf 表示 VRWXAD 均为 1
+    .zero 255 * 8
+    # Item 258: 0xffff_ffc0_8000_0000 -> 0x8000_0000 (1G), 0xcf means VRWXAD
     .quad (0x80000 << 10) | 0xcf
-    .quad 0
+    .zero 253 * 8
