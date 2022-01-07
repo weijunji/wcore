@@ -24,7 +24,7 @@ fn print_pc() {
     unsafe {
         asm!("auipc {}, 0", out(reg) pc);
     }
-    println!("pc is {:#x}", pc);
+    println!("PC: {:#x}", pc);
 }
 
 #[no_mangle]

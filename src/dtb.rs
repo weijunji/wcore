@@ -473,6 +473,13 @@ struct DtbReserveEntry {
 
 static mut FDT: mem::MaybeUninit<Dtb> = mem::MaybeUninit::<Dtb>::uninit();
 
+fn parse_u64(reg: &[u8]) -> u64 {
+    let h = u32::from_be(unsafe { *(reg.as_ptr() as *const u32) });
+    let l = u32::from_be(unsafe { *(reg[4..].as_ptr() as *const u32) });
+
+    (h as u64) << 32 | l as u64
+}
+
 pub fn init_early(dtb: usize) {
     // FIXME: this should use virtual address
     let dtb = unsafe {
@@ -483,10 +490,14 @@ pub fn init_early(dtb: usize) {
     };
 
     for node in dtb.enum_subnodes("/") {
-        println!("{}", node);
-    }
+        if node.starts_with("memory") {
+            let reg = dtb.get_property(node, "reg").unwrap();
+            for i in 0..(reg.len() / 16) {
+                let start = parse_u64(&reg[i*16..]);
+                let len = parse_u64(&reg[i*16+8..]);
 
-    for node in dtb.enum_properties("/memory@80000000") {
-        println!("{}", node);
+                println!("Memory {:#x} len {:#x}", start, len);
+            }
+        }
     }
 }
