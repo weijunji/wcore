@@ -7,6 +7,4 @@ rustflags = [
     "-Cforce-frame-pointers",
     "-Cno-redzone",
     "-Csoft-float",
-    "-Ccode-model=large",
-    "-Crelocation-model=pic",
 ]

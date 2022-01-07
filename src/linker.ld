@@ -7,6 +7,7 @@ BASE_ADDRESS = 0xffffffffc0200000;
 SECTIONS
 {
     . = BASE_ADDRESS;
+    base_address = .;
 
     kernel_start = .;
 
