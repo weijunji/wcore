@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
+#![feature(maybe_uninit_extra)]
 
 use core::arch::global_asm;
 use core::sync::atomic;

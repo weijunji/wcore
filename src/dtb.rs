@@ -125,7 +125,6 @@ impl<'a> Dtb<'a> {
         if u32::from_be(header.version) != DTB_VERSION {
             panic!("Bad fdt header version {}", u32::from_be(header.version));
         }
-        println!("Comp {}", u32::from_be(header.last_comp_version));
     }
 
     pub unsafe fn from_raw(address: usize) -> Self {
@@ -476,8 +475,18 @@ static mut FDT: mem::MaybeUninit<Dtb> = mem::MaybeUninit::<Dtb>::uninit();
 
 pub fn init_early(dtb: usize) {
     // FIXME: this should use virtual address
-    unsafe {
+    let dtb = unsafe {
         let dtb = Dtb::from_raw(dtb);
         FDT.write(dtb);
+
+        FDT.assume_init_read()
+    };
+
+    for node in dtb.enum_subnodes("/") {
+        println!("{}", node);
+    }
+
+    for node in dtb.enum_properties("/memory@80000000") {
+        println!("{}", node);
     }
 }
