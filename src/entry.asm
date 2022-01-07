@@ -25,8 +25,7 @@ relocated:
 
     # load per hart stack
     la sp, boot_stack_top
-    li a2, 4096
-    mul a2, a2, a0
+    slli a2, a0, 12
     add sp, sp, a2
 
     tail rust_main
