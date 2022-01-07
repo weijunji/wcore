@@ -1,0 +1,12 @@
+[build]
+target = "riscv64imac-unknown-none-elf"
+
+[target.riscv64imac-unknown-none-elf]
+rustflags = [
+    "-C", "link-arg=-Tsrc/linker.ld",
+    "-Cforce-frame-pointers",
+    "-Cno-redzone",
+    "-Csoft-float",
+    "-Ccode-model=large",
+    "-Crelocation-model=pic",
+]
