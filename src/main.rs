@@ -19,7 +19,7 @@ global_asm!(include_str!("entry.asm"));
 static mut STARTED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 fn print_pc() {
-    let mut pc: u64 = 0;
+    let mut pc: u64;
     unsafe {
         asm!("auipc {}, 0", out(reg) pc);
     }
@@ -34,7 +34,7 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         print_pc();
 
         mm::init_early();
-        dtb::parse_dtb_early(dtb);
+        dtb::init_early(dtb);
 
         unsafe {
             STARTED.store(true, atomic::Ordering::SeqCst);
