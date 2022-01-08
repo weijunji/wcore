@@ -14,6 +14,8 @@ mod panic;
 mod sbi;
 mod dtb;
 mod mm;
+mod interrupt;
+mod asm;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -33,6 +35,8 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         println!("{}", include_str!("logo.txt"));
         println!("Hart {} boot", hart);
         print_pc();
+
+        interrupt::init();
 
         mm::init_early();
         dtb::init_early(dtb);
