@@ -19,6 +19,11 @@ _start:
     jr t0
 
 relocated:
+    # once relocate finish, we can clear the physical address
+    # map in page table, to avoid direct access physical address.
+    la t0, boot_page_table
+    sd zero, 16(t0)
+
     # only support 16 core
     li a2, 16
     bge a0, a2, stop_hart
