@@ -1,8 +1,10 @@
 //! Memory subsystem
 
 use core::mem;
+use core::ops::Add;
+use core::fmt::{ Debug, Formatter, Error };
 
-mod memblock;
+pub mod memblock;
 
 /// In sv39, virtual space split to two part:
 /// 0x0000_0000_0000_0000 - 0x0000_003f_ffff_ffff
@@ -10,7 +12,65 @@ mod memblock;
 /// We use the first part for user space, and the second
 /// part use for kernel space.
 #[cfg(target_pointer_width = "64")]
-const PAGE_OFF: u64 = 0xffffffc0_00000000;
+const PAGE_OFF: usize = 0xffffffc0_00000000;
+
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PhysicalAddr(usize);
+
+impl PhysicalAddr {
+    pub const fn new() -> Self {
+        PhysicalAddr(0)
+    }
+}
+
+impl From<VirtualAddr> for PhysicalAddr {
+    fn from(addr: VirtualAddr) -> Self {
+        PhysicalAddr(addr.0 - PAGE_OFF)
+    }
+}
+
+impl From<usize> for PhysicalAddr {
+    fn from(addr: usize) -> Self {
+        PhysicalAddr(addr)
+    }
+}
+
+impl Debug for PhysicalAddr {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        fmt.write_fmt(format_args!("PA({:#x})", self.0))
+    }
+}
+
+impl Add<usize> for PhysicalAddr {
+    type Output = Self;
+
+    fn add(self, other: usize) -> Self::Output {
+        Self(self.0 + other)
+    }
+}
+
+
+#[repr(transparent)]
+pub struct VirtualAddr(usize);
+
+impl From<PhysicalAddr> for VirtualAddr {
+    fn from(addr: PhysicalAddr) -> Self {
+        VirtualAddr(addr.0 + PAGE_OFF)
+    }
+}
+
+impl Into<usize> for VirtualAddr {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
+impl Debug for VirtualAddr {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        fmt.write_fmt(format_args!("VA({:#x})", self.0))
+    }
+}
 
 #[repr(C)]
 struct PTE(u64);
