@@ -1,7 +1,7 @@
 //! Memory subsystem
 
 use core::mem;
-use core::ops::Add;
+use core::ops::{ Add, AddAssign, Sub, SubAssign };
 use core::fmt::{ Debug, Formatter, Error };
 
 pub mod memblock;
@@ -47,6 +47,34 @@ impl Add<usize> for PhysicalAddr {
 
     fn add(self, other: usize) -> Self::Output {
         Self(self.0 + other)
+    }
+}
+
+impl AddAssign<usize> for PhysicalAddr {
+    fn add_assign(&mut self, other: usize) {
+        self.0 += other
+    }
+}
+
+impl Sub<usize> for PhysicalAddr {
+    type Output = Self;
+
+    fn sub(self, other: usize) -> Self::Output {
+        Self(self.0 - other)
+    }
+}
+
+impl Sub for PhysicalAddr {
+    type Output = usize;
+
+    fn sub(self, other: PhysicalAddr) -> Self::Output {
+        self.0 - other.0
+    }
+}
+
+impl SubAssign<usize> for PhysicalAddr {
+    fn sub_assign(&mut self, other: usize) {
+        self.0 -= other
     }
 }
 
