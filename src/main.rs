@@ -16,6 +16,7 @@ mod dtb;
 mod mm;
 mod interrupt;
 mod asm;
+mod sync;
 
 global_asm!(include_str!("entry.asm"));
 

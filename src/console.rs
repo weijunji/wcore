@@ -14,7 +14,8 @@
 use crate::sbi::*;
 use core::fmt::{self, Write};
 
-// TODO: spinlock
+use crate::sync::Spin;
+
 struct Stdout;
 
 impl Write for Stdout {
@@ -29,9 +30,12 @@ impl Write for Stdout {
     }
 }
 
+
+static STDOUT: Spin<Stdout> = Spin::new(Stdout);
+
 /// print `fmt::arguments` to stdout
 pub fn print(args: fmt::Arguments) {
-    Stdout.write_fmt(args).unwrap();
+    STDOUT.lock().write_fmt(args).unwrap();
 }
 
 #[macro_export]

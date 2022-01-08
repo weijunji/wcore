@@ -7,7 +7,7 @@ OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
 ifndef NCPU
-NCPU := 2
+NCPU := 4
 endif
 
 QEMU_ARGS = -machine virt \
