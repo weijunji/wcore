@@ -38,8 +38,10 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
 
         interrupt::init();
 
+        let dtb = mm::PhysicalAddr::from(dtb);
+        dtb::init_early(dtb.into());
+
         mm::init_early();
-        dtb::init_early(dtb);
 
         unsafe {
             STARTED.store(true, atomic::Ordering::SeqCst);

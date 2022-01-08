@@ -111,6 +111,7 @@ struct DtbHeader {
     size_dt_struct: u32,
 }
 
+#[allow(dead_code)]
 pub struct Dtb<'a> {
     header: &'a DtbHeader,
     struct_slice: &'a [u8],
@@ -463,6 +464,7 @@ impl<'a, 'b> Iterator for EnumPropertiesIter<'a, 'b> {
     }
 }
 
+#[allow(dead_code)]
 #[repr(C)]
 struct DtbReserveEntry {
     address: u64,
@@ -470,6 +472,8 @@ struct DtbReserveEntry {
 }
 
 // Previous was copy from https://github.com/hermitcore/dtb
+
+use crate::mm::VirtualAddr;
 
 static mut FDT: mem::MaybeUninit<Dtb> = mem::MaybeUninit::<Dtb>::uninit();
 
@@ -480,10 +484,9 @@ fn parse_u64(reg: &[u8]) -> u64 {
     (h as u64) << 32 | l as u64
 }
 
-pub fn init_early(dtb: usize) {
-    // FIXME: this should use virtual address
+pub fn init_early(dtb: VirtualAddr) {
     let dtb = unsafe {
-        let dtb = Dtb::from_raw(dtb);
+        let dtb = Dtb::from_raw(dtb.into());
         FDT.write(dtb);
 
         FDT.assume_init_read()
@@ -497,6 +500,7 @@ pub fn init_early(dtb: usize) {
                 let len = parse_u64(&reg[i*16+8..]);
 
                 println!("Memory {:#x} len {:#x}", start, len);
+                unsafe { crate::mm::memblock::MEM_BLOCK.add((start as usize).into(), len as usize); }
             }
         }
     }
