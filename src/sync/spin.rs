@@ -8,6 +8,8 @@ use core::marker::Sized;
 use core::sync::atomic::{ AtomicBool, Ordering, fence };
 use core::ops::{ Deref, DerefMut };
 
+use crate::interrupt;
+
 #[derive(Debug, Default)]
 pub struct Spin<T: ?Sized> {
     locked: AtomicBool,
@@ -20,20 +22,24 @@ impl<T> Spin<T> {
     }
 
     pub fn lock<'a>(&'a self) -> SpinGuard<'a, T> {
-        // TODO: irq
+        let irq = interrupt::intr();
+        interrupt::intr_off();
+
         while self.locked.swap(true, Ordering::Acquire) {
             spin_loop();
         }
 
         fence(Ordering::SeqCst);
 
-        SpinGuard { spin: &self, irq: true }
+        SpinGuard { spin: &self, irq }
     }
 
-    fn unlock(&self) {
+    fn unlock(&self, irq: bool) {
         fence(Ordering::SeqCst);
         self.locked.store(false, Ordering::Release);
-        // TODO: irq
+        if irq {
+            interrupt::intr_on();
+        }
     }
 }
 
@@ -45,7 +51,7 @@ pub struct SpinGuard<'a, T>{
 
 impl<T> Drop for SpinGuard<'_, T> {
     fn drop(&mut self) {
-        self.spin.unlock()
+        self.spin.unlock(self.irq)
     }
 }
 
