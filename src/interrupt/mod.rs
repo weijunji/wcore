@@ -1,10 +1,10 @@
 //! Risc V Interrupt
 //!
 
-use core::arch::global_asm;
 use core::arch::asm;
+use core::arch::global_asm;
 
-use crate::arch::{ self, sstatus };
+use crate::arch::{self, sstatus};
 use crate::sbi::set_timer;
 
 global_asm!(include_str!("./interrupt.asm"));
@@ -14,7 +14,7 @@ global_asm!(include_str!("./interrupt.asm"));
 pub struct Context {
     pub regs: [usize; 32],
     pub sstatus: usize,
-    pub sepc: usize
+    pub sepc: usize,
 }
 
 #[no_mangle]
@@ -29,9 +29,7 @@ pub fn interrupt_handler(_context: &mut Context, scause: usize, _stval: usize) {
 
 #[inline]
 pub fn intr() -> bool {
-    unsafe{
-        sstatus::read() & sstatus::SSTATUS::SIE as usize != 0
-    }
+    unsafe { sstatus::read() & sstatus::SSTATUS::SIE as usize != 0 }
 }
 
 /// enable device interrupts
@@ -45,7 +43,7 @@ pub fn intr_on() {
 /// disable device interrupts
 #[inline]
 pub fn intr_off() {
-    unsafe{
+    unsafe {
         sstatus::write(sstatus::read() & !(sstatus::SSTATUS::SIE as usize));
     }
 }

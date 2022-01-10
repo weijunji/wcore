@@ -25,11 +25,15 @@ use byteorder::{BigEndian, ByteOrder};
 use core::{cmp, mem, slice, str};
 
 macro_rules! align_down {
-    ($value:expr, $alignment:expr) => ($value & !($alignment - 1))
+    ($value:expr, $alignment:expr) => {
+        $value & !($alignment - 1)
+    };
 }
 
 macro_rules! align_up {
-    ($value:expr, $alignment:expr) => (align_down!($value + ($alignment - 1), $alignment))
+    ($value:expr, $alignment:expr) => {
+        align_down!($value + ($alignment - 1), $alignment)
+    };
 }
 
 /// Get the length of a C-style null-terminated byte string,
@@ -75,14 +79,16 @@ fn parse_prop_data_length(struct_slice: &mut &[u8]) -> usize {
 /// Get the property name of a FDT_PROP token and advance the struct_slice to the next token.
 fn parse_prop_name<'a>(struct_slice: &mut &[u8], strings_slice: &'a [u8]) -> &'a str {
     // Get the offset of the property name string inside strings_slice.
-    let (property_name_offset_slice, remaining_slice) = struct_slice.split_at(mem::size_of::<u32>());
+    let (property_name_offset_slice, remaining_slice) =
+        struct_slice.split_at(mem::size_of::<u32>());
     *struct_slice = remaining_slice;
     let property_name_offset = BigEndian::read_u32(property_name_offset_slice) as usize;
 
     // Determine the length of that null-terminated string and return it.
     let property_name_slice = &strings_slice[property_name_offset..];
     let property_name_length = c_strlen_on_slice(property_name_slice);
-    let property_name = unsafe { str::from_utf8_unchecked(&property_name_slice[..property_name_length]) };
+    let property_name =
+        unsafe { str::from_utf8_unchecked(&property_name_slice[..property_name_length]) };
 
     property_name
 }
@@ -92,10 +98,10 @@ const DTB_MAGIC: u32 = 0xD00DFEED;
 const DTB_VERSION: u32 = 17;
 
 const FDT_BEGIN_NODE: u32 = 0x00000001;
-const FDT_END_NODE: u32   = 0x00000002;
-const FDT_PROP: u32       = 0x00000003;
-const FDT_NOP: u32        = 0x00000004;
-const FDT_END: u32        = 0x00000009;
+const FDT_END_NODE: u32 = 0x00000002;
+const FDT_PROP: u32 = 0x00000003;
+const FDT_NOP: u32 = 0x00000004;
+const FDT_END: u32 = 0x00000009;
 
 #[repr(C)]
 struct DtbHeader {
@@ -119,7 +125,7 @@ pub struct Dtb<'a> {
 }
 
 impl<'a> Dtb<'a> {
-    fn check_header(header: &DtbHeader){
+    fn check_header(header: &DtbHeader) {
         if u32::from_be(header.magic) != DTB_MAGIC {
             panic!("Bad fdt header magic {:#x}", u32::from_be(header.magic));
         }
@@ -129,7 +135,7 @@ impl<'a> Dtb<'a> {
     }
 
     pub unsafe fn from_raw(address: usize) -> Self {
-        let header = & *(address as *const DtbHeader);
+        let header = &*(address as *const DtbHeader);
         Self::check_header(header);
 
         let struct_addr = address + u32::from_be(header.off_dt_struct) as usize;
@@ -140,7 +146,11 @@ impl<'a> Dtb<'a> {
         let length = u32::from_be(header.size_dt_strings) as usize;
         let strings_slice = slice::from_raw_parts(str_addr as *const u8, length);
 
-        Self { header, struct_slice, strings_slice }
+        Self {
+            header,
+            struct_slice,
+            strings_slice,
+        }
     }
 
     pub fn enum_subnodes<'b>(&self, path: &'b str) -> EnumSubnodesIter<'a, 'b> {
@@ -211,7 +221,7 @@ impl<'a> Dtb<'a> {
                             }
                         }
                     }
-                },
+                }
 
                 FDT_END_NODE => {
                     // Finish this nesting level.
@@ -222,7 +232,7 @@ impl<'a> Dtb<'a> {
                         // all properties of the node we were looking for and can stop.
                         struct_slice = &[];
                     }
-                },
+                }
 
                 FDT_PROP => {
                     // Get the property data length.
@@ -247,16 +257,16 @@ impl<'a> Dtb<'a> {
                         struct_slice = &struct_slice[mem::size_of::<u32>()..];
                         struct_slice = &struct_slice[aligned_length..];
                     }
-                },
+                }
 
                 FDT_NOP => {
                     // Nothing to be done for NOPs.
-                },
+                }
 
                 FDT_END => {
                     // This marks the end of the device tree.
                     struct_slice = &[];
-                },
+                }
 
                 _ => {
                     panic!("get_property encountered an invalid token {:#010X} {} bytes before the end", token, struct_slice.len());
@@ -267,7 +277,6 @@ impl<'a> Dtb<'a> {
         None
     }
 }
-
 
 pub struct EnumSubnodesIter<'a, 'b> {
     struct_slice: &'a [u8],
@@ -319,7 +328,7 @@ impl<'a, 'b> Iterator for EnumSubnodesIter<'a, 'b> {
                             }
                         }
                     }
-                },
+                }
 
                 FDT_END_NODE => {
                     // Finish this nesting level.
@@ -330,7 +339,7 @@ impl<'a, 'b> Iterator for EnumSubnodesIter<'a, 'b> {
                         // we have finished enumerating the parent node and can stop.
                         self.struct_slice = &[];
                     }
-                },
+                }
 
                 FDT_PROP => {
                     // EnumSubnodesIter is not interested in property information.
@@ -341,16 +350,16 @@ impl<'a, 'b> Iterator for EnumSubnodesIter<'a, 'b> {
                     // Skip over the property name offset and data.
                     self.struct_slice = &self.struct_slice[mem::size_of::<u32>()..];
                     self.struct_slice = &self.struct_slice[aligned_length..];
-                },
+                }
 
                 FDT_NOP => {
                     // Nothing to be done for NOPs.
-                },
+                }
 
                 FDT_END => {
                     // This marks the end of the device tree.
                     self.struct_slice = &[];
-                },
+                }
 
                 _ => {
                     panic!("EnumSubnodesIter encountered an invalid token {:#010X} {} bytes before the end", token, self.struct_slice.len());
@@ -361,7 +370,6 @@ impl<'a, 'b> Iterator for EnumSubnodesIter<'a, 'b> {
         None
     }
 }
-
 
 pub struct EnumPropertiesIter<'a, 'b> {
     struct_slice: &'a [u8],
@@ -414,7 +422,7 @@ impl<'a, 'b> Iterator for EnumPropertiesIter<'a, 'b> {
                             }
                         }
                     }
-                },
+                }
 
                 FDT_END_NODE => {
                     // Finish this nesting level.
@@ -425,7 +433,7 @@ impl<'a, 'b> Iterator for EnumPropertiesIter<'a, 'b> {
                         // all properties of the node we were looking for and can stop.
                         self.struct_slice = &[];
                     }
-                },
+                }
 
                 FDT_PROP => {
                     // Get the property data length.
@@ -435,7 +443,8 @@ impl<'a, 'b> Iterator for EnumPropertiesIter<'a, 'b> {
                     if self.path.is_empty() {
                         // We have reached the node we are looking for and this is a property to enumerate.
                         // So get the property name, skip over the data, and return the name.
-                        let property_name = parse_prop_name(&mut self.struct_slice, self.strings_slice);
+                        let property_name =
+                            parse_prop_name(&mut self.struct_slice, self.strings_slice);
                         self.struct_slice = &self.struct_slice[aligned_length..];
                         return Some(property_name);
                     } else {
@@ -443,16 +452,16 @@ impl<'a, 'b> Iterator for EnumPropertiesIter<'a, 'b> {
                         self.struct_slice = &self.struct_slice[mem::size_of::<u32>()..];
                         self.struct_slice = &self.struct_slice[aligned_length..];
                     }
-                },
+                }
 
                 FDT_NOP => {
                     // Nothing to be done for NOPs.
-                },
+                }
 
                 FDT_END => {
                     // This marks the end of the device tree.
                     self.struct_slice = &[];
-                },
+                }
 
                 _ => {
                     panic!("EnumPropertiesIter encountered an invalid token {:#010X} {} bytes before the end", token, self.struct_slice.len());
@@ -496,8 +505,8 @@ pub fn init_early(dtb: VirtualAddr) {
         if node.starts_with("memory") {
             let reg = dtb.get_property(node, "reg").unwrap();
             for i in 0..(reg.len() / 16) {
-                let start = parse_u64(&reg[i*16..]);
-                let len = parse_u64(&reg[i*16+8..]);
+                let start = parse_u64(&reg[i * 16..]);
+                let len = parse_u64(&reg[i * 16 + 8..]);
 
                 println!("Memory {:#x} len {:#x}", start, len);
                 unsafe {

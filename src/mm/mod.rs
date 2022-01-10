@@ -1,8 +1,8 @@
 //! Memory subsystem
 
+use core::fmt::{Debug, Error, Formatter};
 use core::mem;
-use core::ops::{ Add, AddAssign, Sub, SubAssign };
-use core::fmt::{ Debug, Formatter, Error };
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 pub mod memblock;
 
@@ -77,7 +77,6 @@ impl SubAssign<usize> for PhysicalAddr {
         self.0 -= other
     }
 }
-
 
 #[repr(transparent)]
 pub struct VirtualAddr(usize);

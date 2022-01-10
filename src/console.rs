@@ -1,13 +1,13 @@
 //! 实现控制台的字符输入和输出
-//! 
+//!
 //! # 格式化输出
-//! 
+//!
 //! [`core::fmt::Write`] trait 包含
 //! - 需要实现的 [`write_str`] 方法
 //! - 自带实现，但依赖于 [`write_str`] 的 [`write_fmt`] 方法
-//! 
+//!
 //! 我们声明一个类型，为其实现 [`write_str`] 方法后，就可以使用 [`write_fmt`] 来进行格式化输出
-//! 
+//!
 //! [`write_str`]: core::fmt::Write::write_str
 //! [`write_fmt`]: core::fmt::Write::write_fmt
 
@@ -29,7 +29,6 @@ impl Write for Stdout {
         Ok(())
     }
 }
-
 
 static STDOUT: Spin<Stdout> = Spin::new(Stdout);
 

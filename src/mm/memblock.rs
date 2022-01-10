@@ -1,21 +1,20 @@
 //! Memblock is used for early memory allocation.
 //! Once buddy system is ready, memblock will be free to buddy system.
-//! 
+//!
 //! # SAFETY
 //! Memblock can ONLY be used in single-thread (in boot thread),
 //! it is NOT thread safe.
-//! 
+//!
 
-use core::fmt::Debug;
 use core::alloc::Layout;
+use core::fmt::Debug;
 
-use super::{ PhysicalAddr, VirtualAddr };
+use super::{PhysicalAddr, VirtualAddr};
 
 pub struct MemBlock<const N: usize, const M: usize> {
     memory: MemBlockType<N>,
     reserved: MemBlockType<M>,
 }
-
 
 struct MemBlockType<const N: usize> {
     len: usize,
@@ -33,7 +32,9 @@ impl<const N: usize> MemBlockType<N> {
             panic!("Invalid pos: insert in {} but len is {}", pos, self.len);
         }
 
-        self.region.as_mut_slice().copy_within(pos..self.len, pos + 1);
+        self.region
+            .as_mut_slice()
+            .copy_within(pos..self.len, pos + 1);
         self.region[pos] = *region;
         self.len += 1;
     }
@@ -43,7 +44,9 @@ impl<const N: usize> MemBlockType<N> {
             panic!("Invalid pos: delete in {} but len is {}", pos, self.len);
         }
 
-        self.region.as_mut_slice().copy_within(pos+1..self.len, pos);
+        self.region
+            .as_mut_slice()
+            .copy_within(pos + 1..self.len, pos);
         self.len -= 1;
         println!("{:x?}", &self.region[0..self.len]);
     }
@@ -68,7 +71,7 @@ impl<const N: usize> MemBlockType<N> {
                     }
                 }
                 println!("{:x?}", &self.region[0..self.len]);
-                return
+                return;
             }
         }
 
@@ -78,7 +81,7 @@ impl<const N: usize> MemBlockType<N> {
                 // combine with next
                 self.attach_before(pos, region.size);
                 println!("{:x?}", &self.region[0..self.len]);
-                return
+                return;
             }
         }
 
@@ -156,7 +159,7 @@ impl<const N: usize> MemBlockType<N> {
         if size > self.region[pos].size {
             panic!("Too big");
         }
-        
+
         if size == self.region[pos].size {
             self.delete(pos);
         } else {
@@ -174,7 +177,6 @@ impl<const N: usize> MemBlockType<N> {
     }
 }
 
-
 #[derive(Debug, Clone, Copy)]
 struct MemBlockRegion {
     base: PhysicalAddr,
@@ -185,15 +187,13 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
     /// Add block to memory region.
     /// Not support overlap now.
     pub fn add(&mut self, base: PhysicalAddr, size: usize) {
-        let region = MemBlockRegion{base, size};
+        let region = MemBlockRegion { base, size };
         if self.reserved.check(&region).is_err() {
             panic!("Overlap with reserved");
         }
 
         match self.memory.check(&region) {
-            Ok(pos) => {
-                self.memory.insert(&region, pos)
-            },
+            Ok(pos) => self.memory.insert(&region, pos),
             Err(_) => panic!("Overlap with memory"),
         }
     }
@@ -202,7 +202,7 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
     /// Only support overlap in one `memory` region.
     /// Not support overlap in `reserved` now.
     pub fn reserve(&mut self, base: PhysicalAddr, size: usize) {
-        let region = MemBlockRegion{base, size};
+        let region = MemBlockRegion { base, size };
         match self.memory.search(base) {
             Ok(pos) => {
                 let m = self.memory.get(pos);
@@ -210,8 +210,8 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
                     panic!("Unsupported now");
                 }
                 self.memory.detach_head(pos, region.size);
-                return
-            },
+                return;
+            }
             Err(pos) => {
                 // Split prev
                 if pos != 0 {
@@ -229,9 +229,10 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
 
                             let base = region.base + region.size;
                             let size = end - base;
-                            self.memory.insert_no_combine(&MemBlockRegion{base, size}, pos);
+                            self.memory
+                                .insert_no_combine(&MemBlockRegion { base, size }, pos);
                         }
-                        return
+                        return;
                     }
                 }
 
@@ -242,31 +243,37 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
                         panic!("Unsupported now");
                     }
                 }
-            },
+            }
         }
 
         match self.reserved.check(&region) {
             Ok(pos) => {
                 println!("Warning: reserve region not in `memory`");
                 self.reserved.insert(&region, pos)
-            },
-            Err(_) => panic!("Overlap with reserved")
+            }
+            Err(_) => panic!("Overlap with reserved"),
         }
     }
 
-    /// alloc one 
+    /// alloc one
     pub fn alloc(&mut self, layout: &Layout) -> VirtualAddr {
         todo!()
     }
 }
 
-pub static mut MEM_BLOCK: MemBlock<128,128> = MemBlock {
+pub static mut MEM_BLOCK: MemBlock<128, 128> = MemBlock {
     memory: MemBlockType {
         len: 0,
-        region: [MemBlockRegion{base: PhysicalAddr::new(), size: 0}; 128],
+        region: [MemBlockRegion {
+            base: PhysicalAddr::new(),
+            size: 0,
+        }; 128],
     },
     reserved: MemBlockType {
         len: 0,
-        region: [MemBlockRegion{base:PhysicalAddr::new(), size: 0}; 128],
+        region: [MemBlockRegion {
+            base: PhysicalAddr::new(),
+            size: 0,
+        }; 128],
     },
 };

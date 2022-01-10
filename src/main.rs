@@ -3,19 +3,19 @@
 #![feature(panic_info_message)]
 #![feature(maybe_uninit_extra)]
 
-use core::arch::global_asm;
-use core::sync::atomic;
-use core::hint;
 use core::arch::asm;
+use core::arch::global_asm;
+use core::hint;
+use core::sync::atomic;
 
 mod arch;
 #[macro_use]
 mod console;
+mod dtb;
+mod interrupt;
+mod mm;
 mod panic;
 mod sbi;
-mod dtb;
-mod mm;
-mod interrupt;
 mod sync;
 mod timer;
 
@@ -49,15 +49,15 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         unsafe {
             STARTED.store(true, atomic::Ordering::Release);
         }
-        loop{}
+        loop {}
     } else {
-        unsafe{
+        unsafe {
             while !STARTED.load(atomic::Ordering::Acquire) {
                 hint::spin_loop();
             }
         }
         interrupt::init();
         println!("Hart {} boot", hart);
-        loop{}
+        loop {}
     }
 }

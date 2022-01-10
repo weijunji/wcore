@@ -16,7 +16,7 @@ QEMU_ARGS = -machine virt \
             -device loader,file=$(BIN_FILE),addr=0x80200000 \
 			-smp $(NCPU)
 
-.PHONY: doc kernel build clean qemu run dtc debug
+.PHONY: doc kernel build clean qemu run dtc debug fmt
 
 build: $(BIN_FILE) 
 
@@ -46,6 +46,10 @@ debug: build
 # generate dts from dtb
 dtc:
 	dtc -o dump.dts -O dts -I dtb dump.dtb
+
+# check fmt
+fmt:
+	@cargo fmt --all -- --check
 
 # build and run with qemu
 run: build qemu

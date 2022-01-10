@@ -10,9 +10,9 @@ pub enum SSTATUS {
     /// User Previous Interrupt Enable
     UPIE = 1 << 4,
     /// Supervisor Interrupt Enable
-    SIE = 1 << 1, 
+    SIE = 1 << 1,
     /// User Interrupt Enable
-    UIE = 1 << 0
+    UIE = 1 << 0,
 }
 
 #[inline]
