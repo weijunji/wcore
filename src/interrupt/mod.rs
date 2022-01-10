@@ -1,11 +1,9 @@
 //! Risc V Interrupt
 //!
 
-use core::arch::asm;
 use core::arch::global_asm;
 
 use crate::arch::{self, sstatus};
-use crate::sbi::set_timer;
 
 global_asm!(include_str!("./interrupt.asm"));
 
