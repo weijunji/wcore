@@ -62,7 +62,8 @@ impl<const N: usize> MemBlockType<N> {
                     if m.base + m.size == n.base {
                         // combine with next
                         // m.size += n.size;
-                        self.attach(pos - 1, n.size);
+                        let sz = n.size;
+                        self.attach(pos - 1, sz);
                         self.delete(pos);
                     }
                 }
