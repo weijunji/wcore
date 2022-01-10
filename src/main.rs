@@ -8,6 +8,7 @@ use core::sync::atomic;
 use core::hint;
 use core::arch::asm;
 
+mod arch;
 #[macro_use]
 mod console;
 mod panic;
@@ -15,8 +16,8 @@ mod sbi;
 mod dtb;
 mod mm;
 mod interrupt;
-mod asm;
 mod sync;
+mod timer;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -33,11 +34,12 @@ fn print_pc() {
 #[no_mangle]
 pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
     if hart == 0 {
-        println!("{}", include_str!("logo.txt"));
-        println!("Hart {} boot", hart);
-        print_pc();
-
+        timer::init();
         interrupt::init();
+
+        println!("{}", include_str!("logo.txt"));
+        println!("Hart {} boot, dtb in {:#x}", hart, dtb);
+        print_pc();
 
         let dtb = mm::PhysicalAddr::from(dtb);
         dtb::init_early(dtb.into());
@@ -45,16 +47,17 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         mm::init_early();
 
         unsafe {
-            STARTED.store(true, atomic::Ordering::SeqCst);
+            STARTED.store(true, atomic::Ordering::Release);
         }
         loop{}
     } else {
         unsafe{
-            while !STARTED.load(atomic::Ordering::SeqCst) {
+            while !STARTED.load(atomic::Ordering::Acquire) {
                 hint::spin_loop();
             }
         }
+        interrupt::init();
         println!("Hart {} boot", hart);
-        panic!("end of rust_main")
+        loop{}
     }
 }

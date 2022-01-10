@@ -2,8 +2,10 @@
 //!
 
 use core::arch::global_asm;
+use core::arch::asm;
 
-use crate::asm;
+use crate::arch::{ self, sstatus };
+use crate::sbi::set_timer;
 
 global_asm!(include_str!("./interrupt.asm"));
 
@@ -17,7 +19,35 @@ pub struct Context {
 
 #[no_mangle]
 pub fn interrupt_handler(_context: &mut Context, scause: usize, _stval: usize) {
-    panic!("Interrupted: {:?}", scause);
+    if scause == 0x8000000000000005 {
+        crate::timer::set_next_timeout();
+    } else {
+        println!("Interrupted: {:#x?}", scause);
+        //_context.sepc += 2;
+    }
+}
+
+#[inline]
+pub fn intr() -> bool {
+    unsafe{
+        sstatus::read() & sstatus::SSTATUS::SIE as usize != 0
+    }
+}
+
+/// enable device interrupts
+#[inline]
+pub fn intr_on() {
+    unsafe {
+        sstatus::write(sstatus::read() | sstatus::SSTATUS::SIE as usize);
+    }
+}
+
+/// disable device interrupts
+#[inline]
+pub fn intr_off() {
+    unsafe{
+        sstatus::write(sstatus::read() & !(sstatus::SSTATUS::SIE as usize));
+    }
 }
 
 pub fn init() {
@@ -26,8 +56,8 @@ pub fn init() {
             /// entry of interrupt in `interrupt.asm`
             fn __interrupt();
         }
-        asm::write_stvec(__interrupt as usize);
-        // use `ebreak` to cause an interrupt to debug
-        // core::arch::asm!("ebreak");
+        arch::write_stvec(__interrupt as usize);
+
+        intr_on();
     }
 }
