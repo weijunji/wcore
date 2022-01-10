@@ -1,6 +1,8 @@
 //! Synchronization
 
+mod seqlock;
 mod spin;
 
 pub use core::sync::*;
-pub use spin::Spin;
+pub use seqlock::*;
+pub use spin::*;
