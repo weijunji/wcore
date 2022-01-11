@@ -166,6 +166,8 @@ impl<const N: usize> MemBlockType<N> {
             self.region[pos].size -= size;
             self.region[pos].base += size;
         }
+
+        println!("{:x?}", &self.region[0..self.len]);
     }
 
     pub fn get(&self, pos: usize) -> &MemBlockRegion {
@@ -203,6 +205,7 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
     /// Not support overlap in `reserved` now.
     pub fn reserve(&mut self, base: PhysicalAddr, size: usize) {
         let region = MemBlockRegion { base, size };
+        let mut found = false;
         match self.memory.search(base) {
             Ok(pos) => {
                 let m = self.memory.get(pos);
@@ -210,7 +213,7 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
                     panic!("Unsupported now");
                 }
                 self.memory.detach_head(pos, region.size);
-                return;
+                found = true;
             }
             Err(pos) => {
                 // Split prev
@@ -232,7 +235,7 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
                             self.memory
                                 .insert_no_combine(&MemBlockRegion { base, size }, pos);
                         }
-                        return;
+                        found = true;
                     }
                 }
 
@@ -248,7 +251,9 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
 
         match self.reserved.check(&region) {
             Ok(pos) => {
-                println!("Warning: reserve region not in `memory`");
+                if !found {
+                    println!("Warning: reserve region not in memory");
+                }
                 self.reserved.insert(&region, pos)
             }
             Err(_) => panic!("Overlap with reserved"),
@@ -265,14 +270,14 @@ pub static mut MEM_BLOCK: MemBlock<128, 128> = MemBlock {
     memory: MemBlockType {
         len: 0,
         region: [MemBlockRegion {
-            base: PhysicalAddr::new(),
+            base: PhysicalAddr::new(0),
             size: 0,
         }; 128],
     },
     reserved: MemBlockType {
         len: 0,
         region: [MemBlockRegion {
-            base: PhysicalAddr::new(),
+            base: PhysicalAddr::new(0),
             size: 0,
         }; 128],
     },

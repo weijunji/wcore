@@ -4,6 +4,7 @@ use core::fmt::{Debug, Error, Formatter};
 use core::mem;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
+pub mod buddy;
 pub mod memblock;
 
 /// In sv39, virtual space split to two part:
@@ -19,8 +20,8 @@ const PAGE_OFF: usize = 0xffffffc0_00000000;
 pub struct PhysicalAddr(usize);
 
 impl PhysicalAddr {
-    pub const fn new() -> Self {
-        PhysicalAddr(0)
+    pub const fn new(addr: usize) -> Self {
+        PhysicalAddr(addr)
     }
 }
 
@@ -81,6 +82,12 @@ impl SubAssign<usize> for PhysicalAddr {
 #[repr(transparent)]
 pub struct VirtualAddr(usize);
 
+impl VirtualAddr {
+    pub const fn new(addr: usize) -> VirtualAddr {
+        VirtualAddr(addr)
+    }
+}
+
 impl From<PhysicalAddr> for VirtualAddr {
     fn from(addr: PhysicalAddr) -> Self {
         VirtualAddr(addr.0 + PAGE_OFF)
@@ -117,6 +124,23 @@ struct PMD {
     pte: [PTE; 512],
 }
 
+extern "C" {
+    fn kernel_end();
+}
+
+const MEMORY_OFFSET: PhysicalAddr = PhysicalAddr::new(0x8000_0000);
+
 pub fn init_early() {
     println!("Initializing {}", mem::size_of::<PMD>());
+    unsafe {
+        println!(
+            "kernel {:?} {:#x}",
+            MEMORY_OFFSET,
+            kernel_end as usize - PAGE_OFF
+        );
+        memblock::MEM_BLOCK.reserve(
+            MEMORY_OFFSET,
+            PhysicalAddr::from(VirtualAddr::new(kernel_end as usize)) - MEMORY_OFFSET,
+        );
+    }
 }
