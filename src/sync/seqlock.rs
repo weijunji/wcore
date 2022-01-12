@@ -106,5 +106,5 @@ impl<T> DerefMut for SeqLockGuard<'_, T> {
     }
 }
 
-unsafe impl<T: ?Sized + Sync> Sync for SeqLock<T> {}
-unsafe impl<T: ?Sized + Send> Send for SeqLock<T> {}
+unsafe impl<T: ?Sized> Sync for SeqLock<T> {}
+unsafe impl<T: ?Sized> Send for SeqLock<T> {}
