@@ -177,6 +177,10 @@ impl<const N: usize> MemBlockType<N> {
 
         unsafe { &self.region.get_unchecked(pos) }
     }
+
+    pub fn as_slice(&self) -> &[MemBlockRegion] {
+        return &self.region[0..self.len]
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -261,8 +265,25 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
     }
 
     /// alloc one
-    pub fn alloc(&mut self, layout: &Layout) -> VirtualAddr {
-        todo!()
+    pub fn alloc(&mut self, size: usize) -> VirtualAddr {
+        let found = false;
+        let target = 0;
+        match self.memory.as_slice().iter().position(|mem| mem.size >= size) {
+            Some(pos) => {
+                let mem = self.memory.get(pos);
+                let addr = mem.base;
+                self.memory.detach_head(pos, size);
+                addr.into()
+            }
+            None => panic!("No enough memory"),
+        }
+    }
+
+    pub fn free_all<F>(&mut self, f: F) where F: Fn(PhysicalAddr, usize) {
+        for mem in self.memory.as_slice().iter() {
+            f(mem.base, mem.size);
+        }
+        self.memory.len = 0;
     }
 }
 
