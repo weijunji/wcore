@@ -482,6 +482,7 @@ struct DtbReserveEntry {
 
 // Previous was copy from https://github.com/hermitcore/dtb
 
+use crate::mm::PhysicalAddr;
 use crate::mm::VirtualAddr;
 
 static mut FDT: mem::MaybeUninit<Dtb> = mem::MaybeUninit::<Dtb>::uninit();
@@ -500,6 +501,12 @@ pub fn init_early(dtb: VirtualAddr) {
 
         FDT.assume_init_read()
     };
+}
+
+pub fn get_memory() -> (PhysicalAddr, usize) {
+    let dtb = unsafe {
+        FDT.assume_init_read()
+    };
 
     for node in dtb.enum_subnodes("/") {
         if node.starts_with("memory") {
@@ -508,15 +515,9 @@ pub fn init_early(dtb: VirtualAddr) {
                 let start = parse_u64(&reg[i * 16..]);
                 let len = parse_u64(&reg[i * 16 + 8..]);
 
-                println!("Memory {:#x} len {:#x}", start, len);
-                unsafe {
-                    crate::mm::memblock::MEM_BLOCK.add((start as usize).into(), len as usize);
-                    // crate::mm::memblock::MEM_BLOCK.add(0x88000000.into(), len as usize);
-                    // crate::mm::memblock::MEM_BLOCK.add(0x0.into(), len as usize);
-                    // crate::mm::memblock::MEM_BLOCK.add(0x8000000.into(), len as usize);
-                    // crate::mm::memblock::MEM_BLOCK.add(0x10000000.into(), 0x70000000);
-                }
+                return (PhysicalAddr::new(start as usize), len as usize)
             }
         }
     }
+    panic!("No memory in dtb");
 }
