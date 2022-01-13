@@ -41,7 +41,7 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         println!("Hart {} boot, dtb in {:#x}", hart, dtb);
         print_pc();
 
-        let dtb = mm::PhysicalAddr::from(dtb);
+        let dtb = mm::PhysicalAddr::new(dtb);
         dtb::init_early(dtb.into());
 
         mm::init_early();

@@ -6,6 +6,9 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 pub mod buddy;
 pub mod memblock;
+pub mod page;
+
+pub use page::*;
 
 /// In sv39, virtual space split to two part:
 /// 0x0000_0000_0000_0000 - 0x0000_003f_ffff_ffff
@@ -15,6 +18,11 @@ pub mod memblock;
 #[cfg(target_pointer_width = "64")]
 const PAGE_OFF: usize = 0xffffffc0_00000000;
 
+const MEMORY_OFFSET: usize = 0x8000_0000;
+
+const PAGE_SHIFT: usize = 12;
+const PAGE_MASK: usize = (1 << PAGE_SHIFT) - 1;
+
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PhysicalAddr(usize);
@@ -22,6 +30,20 @@ pub struct PhysicalAddr(usize);
 impl PhysicalAddr {
     pub const fn new(addr: usize) -> Self {
         PhysicalAddr(addr)
+    }
+
+    pub fn page_frame(&self) -> PageFrame {
+        let pfn = (self.0 - MEMORY_OFFSET) >> PAGE_SHIFT;
+        PageFrame(pfn)
+    }
+
+    pub fn next_page_frame(&self) -> PageFrame {
+        let pfn = (self.0 - MEMORY_OFFSET) >> PAGE_SHIFT;
+        if self.0 & PAGE_MASK == 0 {
+            PageFrame(pfn)
+        } else {
+            PageFrame(pfn + 1)
+        }
     }
 }
 
@@ -31,9 +53,9 @@ impl From<VirtualAddr> for PhysicalAddr {
     }
 }
 
-impl From<usize> for PhysicalAddr {
-    fn from(addr: usize) -> Self {
-        PhysicalAddr(addr)
+impl From<PhysicalAddr> for usize {
+    fn from(addr: PhysicalAddr) -> Self {
+        addr.0
     }
 }
 
@@ -80,11 +102,21 @@ impl SubAssign<usize> for PhysicalAddr {
 }
 
 #[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VirtualAddr(usize);
 
 impl VirtualAddr {
     pub const fn new(addr: usize) -> VirtualAddr {
         VirtualAddr(addr)
+    }
+
+    pub fn page_frame(&self) -> PageFrame {
+        let pfn = (self.0 - PAGE_OFF - MEMORY_OFFSET) >> PAGE_SHIFT;
+        PageFrame(pfn)
+    }
+
+    pub fn as_ptr(self) -> *mut usize {
+        self.0 as *mut usize
     }
 }
 
@@ -128,19 +160,24 @@ extern "C" {
     fn kernel_end();
 }
 
-const MEMORY_OFFSET: PhysicalAddr = PhysicalAddr::new(0x8000_0000);
-
 pub fn init_early() {
-    println!("Initializing {}", mem::size_of::<PMD>());
+    let (mem, len) = crate::dtb::get_memory();
+    println!("Memory {:?} len {:#x} npage {}", mem, len, len >> 12);
+    println!("Kernel end {:#x}", kernel_end as usize - PAGE_OFF);
+    // Init memblock
     unsafe {
-        println!(
-            "kernel {:?} {:#x}",
-            MEMORY_OFFSET,
-            kernel_end as usize - PAGE_OFF
-        );
+        memblock::MEM_BLOCK.add(mem, len);
         memblock::MEM_BLOCK.reserve(
-            MEMORY_OFFSET,
-            PhysicalAddr::from(VirtualAddr::new(kernel_end as usize)) - MEMORY_OFFSET,
+            PhysicalAddr::new(MEMORY_OFFSET),
+            kernel_end as usize - PAGE_OFF - MEMORY_OFFSET,
         );
     }
+
+    // Init pages
+    Pages::init(len >> PAGE_SHIFT);
+
+    // Free all free memory to buddy system
+    unsafe { memblock::MEM_BLOCK.free_all(buddy::free_to_buddy); }
+
+    // Init slub
 }
