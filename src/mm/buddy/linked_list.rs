@@ -120,13 +120,13 @@ mod test {
     fn test() {
         let mut list = LinkedList::new();
         let mut a: usize = 0;
-        list.insert(&mut a);
+        list.push(&mut a);
         let mut b: usize = 0;
-        list.insert(&mut b);
+        list.push(&mut b);
         let mut c: usize = 0;
-        list.insert(&mut c);
+        list.push(&mut c);
         let mut d: usize = 0;
-        list.insert(&mut d);
+        list.push(&mut d);
 
         println!("test 1");
         for item in list.iter() {
