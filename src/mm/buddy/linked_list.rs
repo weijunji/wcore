@@ -5,6 +5,7 @@
 use core::marker::PhantomData;
 use core::ptr;
 
+#[derive(Copy, Clone)]
 pub struct LinkedList {
     head: *mut usize,
 }
@@ -20,7 +21,7 @@ impl LinkedList {
         self.head.is_null()
     }
 
-    pub fn insert(&mut self, node: *mut usize) {
+    pub fn push(&mut self, node: *mut usize) {
         unsafe {
             *node = self.head as usize;
         }
