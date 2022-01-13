@@ -177,7 +177,9 @@ pub fn init_early() {
     Pages::init(len >> PAGE_SHIFT);
 
     // Free all free memory to buddy system
-    unsafe { memblock::MEM_BLOCK.free_all(buddy::free_to_buddy); }
+    unsafe {
+        memblock::MEM_BLOCK.free_all(buddy::free_to_buddy);
+    }
 
     // Init slub
 }

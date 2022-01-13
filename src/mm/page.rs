@@ -1,11 +1,11 @@
 //! Struct for per page
 
-use core::mem::{MaybeUninit, size_of};
+use core::mem::{size_of, MaybeUninit};
 
 use super::*;
 
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct PageFrame(pub usize);
 
 impl PageFrame {

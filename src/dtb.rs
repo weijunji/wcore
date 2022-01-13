@@ -504,9 +504,7 @@ pub fn init_early(dtb: VirtualAddr) {
 }
 
 pub fn get_memory() -> (PhysicalAddr, usize) {
-    let dtb = unsafe {
-        FDT.assume_init_read()
-    };
+    let dtb = unsafe { FDT.assume_init_read() };
 
     for node in dtb.enum_subnodes("/") {
         if node.starts_with("memory") {
@@ -515,7 +513,7 @@ pub fn get_memory() -> (PhysicalAddr, usize) {
                 let start = parse_u64(&reg[i * 16..]);
                 let len = parse_u64(&reg[i * 16 + 8..]);
 
-                return (PhysicalAddr::new(start as usize), len as usize)
+                return (PhysicalAddr::new(start as usize), len as usize);
             }
         }
     }

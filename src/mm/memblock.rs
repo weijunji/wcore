@@ -179,7 +179,7 @@ impl<const N: usize> MemBlockType<N> {
     }
 
     pub fn as_slice(&self) -> &[MemBlockRegion] {
-        return &self.region[0..self.len]
+        &self.region[0..self.len]
     }
 }
 
@@ -268,7 +268,12 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
     pub fn alloc(&mut self, size: usize) -> VirtualAddr {
         let found = false;
         let target = 0;
-        match self.memory.as_slice().iter().position(|mem| mem.size >= size) {
+        match self
+            .memory
+            .as_slice()
+            .iter()
+            .position(|mem| mem.size >= size)
+        {
             Some(pos) => {
                 let mem = self.memory.get(pos);
                 let addr = mem.base;
@@ -279,7 +284,10 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
         }
     }
 
-    pub fn free_all<F>(&mut self, f: F) where F: Fn(PhysicalAddr, usize) {
+    pub fn free_all<F>(&mut self, f: F)
+    where
+        F: Fn(PhysicalAddr, usize),
+    {
         for mem in self.memory.as_slice().iter() {
             f(mem.base, mem.size);
         }
