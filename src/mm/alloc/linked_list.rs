@@ -1,6 +1,6 @@
 //! Linked List
 //!
-//! Warning: this mod should only used by buddy system
+//! Warning: this mod should only used by buddy system and slub.
 
 use core::marker::PhantomData;
 use core::ptr;

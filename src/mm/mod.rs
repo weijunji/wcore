@@ -4,7 +4,7 @@ use core::fmt::{Debug, Error, Formatter};
 use core::mem;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
-pub mod buddy;
+pub mod alloc;
 pub mod memblock;
 pub mod page;
 
@@ -178,7 +178,7 @@ pub fn init_early() {
 
     // Free all free memory to buddy system
     unsafe {
-        memblock::MEM_BLOCK.free_all(buddy::free_to_buddy);
+        memblock::MEM_BLOCK.free_all(alloc::free_to_buddy);
     }
 
     // Init slub
