@@ -1,7 +1,13 @@
 //! Buddy System Page Allocator
 
 mod buddy;
+mod double_linked_list;
 mod linked_list;
+mod slub;
+
+pub use double_linked_list::DoubleLinkedList;
+pub use linked_list::LinkedList;
+pub use slub::{MemCache, Slub};
 
 use crate::mm::PageFrame;
 use crate::mm::PhysicalAddr;

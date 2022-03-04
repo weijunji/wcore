@@ -22,6 +22,7 @@ const MEMORY_OFFSET: usize = 0x8000_0000;
 
 const PAGE_SHIFT: usize = 12;
 const PAGE_MASK: usize = (1 << PAGE_SHIFT) - 1;
+const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

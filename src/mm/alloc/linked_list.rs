@@ -21,6 +21,10 @@ impl LinkedList {
         self.head.is_null()
     }
 
+    pub fn reset(&mut self) {
+        self.head = ptr::null_mut();
+    }
+
     pub fn push(&mut self, node: *mut usize) {
         unsafe {
             *node = self.head as usize;

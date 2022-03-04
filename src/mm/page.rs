@@ -1,6 +1,9 @@
 //! Struct for per page
 
 use core::mem::{size_of, MaybeUninit};
+use core::sync::atomic::{AtomicU16, Ordering};
+
+use crate::sync::Spin;
 
 use super::*;
 
@@ -9,10 +12,25 @@ use super::*;
 pub struct PageFrame(pub usize);
 
 impl PageFrame {
-    pub unsafe fn as_page(self) -> &'static mut Page {
+    pub unsafe fn get_page(&self) -> &'static mut Page {
         let pfn = self.0;
         let pages = PAGES.assume_init_mut();
         pages.get_mut(pfn).unwrap()
+    }
+
+    pub unsafe fn set_head_page(&self, npages: usize) {
+        let pages = PAGES.assume_init_mut();
+        for pfn in self.0..(self.0 + npages) {
+            let page = pages.get_mut(pfn).unwrap();
+            page.head_page = self.0;
+        }
+    }
+
+    pub unsafe fn get_head_page(&self) -> PageFrame {
+        let pages = PAGES.assume_init_mut();
+        let page = pages.get_mut(self.0).unwrap();
+        let pfn = page.head_page;
+        PageFrame(pfn)
     }
 }
 
@@ -22,8 +40,22 @@ impl Into<VirtualAddr> for PageFrame {
     }
 }
 
+pub union SlubData {
+    pub objs: u16, // total objs
+    pub ord: u16, // ord of buddy
+}
+
 pub struct Page {
-    slub: *mut usize,
+    pub list_node: Spin<alloc::DoubleLinkedList>,
+    pub head_page: usize,
+    pub slub: *mut alloc::MemCache, // slub belongs to
+    /* Partial pages */
+    pub freelist: Spin<alloc::LinkedList>, // slub free obj list
+    // pages: usize, // Nr of pages left
+    // pobjs: usize, // approximate count
+    /* slub */
+    pub inuse: AtomicU16, // inuse objs
+    pub slub_data: SlubData,
 }
 
 static mut PAGES: MaybeUninit<&'static mut [Page]> = MaybeUninit::uninit();

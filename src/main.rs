@@ -2,6 +2,10 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(maybe_uninit_extra)]
+#![feature(const_fn_trait_bound)]
+#![feature(default_alloc_error_handler)]
+
+extern crate alloc;
 
 use core::arch::asm;
 use core::arch::global_asm;
@@ -15,6 +19,7 @@ mod dtb;
 mod interrupt;
 mod mm;
 mod panic;
+mod proc;
 mod sbi;
 mod sync;
 mod timer;
@@ -36,6 +41,8 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
     if hart == 0 {
         timer::init();
         interrupt::init();
+        proc::init(hart);
+        // From now Percpu is available
 
         println!("{}", include_str!("logo.txt"));
         println!("Hart {} boot, dtb in {:#x}", hart, dtb);
@@ -45,9 +52,26 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         dtb::init_early(dtb.into());
 
         mm::init_early();
+        // From now alloc is available
 
         unsafe {
             STARTED.store(true, atomic::Ordering::Release);
+        }
+        {
+            use alloc::boxed::Box;
+            use alloc::vec::Vec;
+            let v = Box::new(5);
+            assert_eq!(*v, 5);
+        
+            let mut vec = Vec::new();
+            for i in 0..10000 {
+                vec.push(i);
+            }
+            assert_eq!(vec.len(), 10000);
+            for (i, value) in vec.into_iter().enumerate() {
+                assert_eq!(value, i);
+            }
+            println!("heap test passed");
         }
         loop {}
     } else {
@@ -57,6 +81,8 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
             }
         }
         interrupt::init();
+        proc::init(hart);
+        // From now Percpu is available
         println!("Hart {} boot", hart);
         loop {}
     }
