@@ -1,9 +1,9 @@
 //! Slub memory allocator
 
+use super::{alloc_pages, free_pages};
+use super::{DoubleLinkedList, LinkedList};
 use crate::mm::{Page, PageFrame, VirtualAddr};
 use crate::mm::{PAGE_SHIFT, PAGE_SIZE};
-use super::{DoubleLinkedList, LinkedList};
-use super::{alloc_pages, free_pages};
 use crate::sync::{PerCpu, Spin};
 
 use core::alloc::{GlobalAlloc, Layout};
@@ -11,7 +11,6 @@ use core::mem::{size_of, MaybeUninit};
 use core::ptr;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-const NCPU: usize = 16;
 const SLUB_MIN_OBJ: usize = 16;
 const SLUB_MAX_ORD: u16 = 3;
 
@@ -19,7 +18,6 @@ const fn min(a: u16, b: u16) -> u16 {
     [a, b][(a > b) as usize]
 }
 
-#[derive(Clone, Copy)]
 struct MemCacheCpu {
     /* current page */
     page: Option<PageFrame>,
@@ -29,12 +27,22 @@ struct MemCacheCpu {
     partial: DoubleLinkedList,
 }
 
+impl const Default for MemCacheCpu {
+    fn default() -> Self {
+        Self {
+            page: None,
+            freelist: LinkedList::new(),
+            partial: DoubleLinkedList::new(),
+        }
+    }
+}
+
 impl MemCacheCpu {
     const fn new() -> Self {
         Self {
             page: None,
             freelist: LinkedList::new(),
-            partial: LinkedList::new(),
+            partial: DoubleLinkedList::new(),
         }
     }
 
@@ -68,7 +76,7 @@ impl MemCacheNode {
 }
 
 pub struct MemCache {
-    cpu_slub: PerCpu<MemCacheCpu, NCPU>,
+    cpu_slub: PerCpu<MemCacheCpu>,
     /* Global partial */
     node: Spin<MemCacheNode>,
     /* Following is const */
@@ -85,7 +93,7 @@ pub struct MemCache {
 macro_rules! align_up {
     ($size: expr, $align: expr) => {{
         ($size + $align - 1) & (!$align + 1)
-    }}
+    }};
 }
 
 impl MemCache {
@@ -93,11 +101,13 @@ impl MemCache {
         assert!(obj_size >= size_of::<usize>());
         assert!(align.is_power_of_two());
         let size = align_up!(obj_size, align);
-        let ord = (align_up!(size * SLUB_MIN_OBJ, PAGE_SIZE) >> PAGE_SHIFT).next_power_of_two().trailing_zeros() as u16;
+        let ord = (align_up!(size * SLUB_MIN_OBJ, PAGE_SIZE) >> PAGE_SHIFT)
+            .next_power_of_two()
+            .trailing_zeros() as u16;
         let ord = min(ord, SLUB_MAX_ORD);
         assert!(1 << ord << PAGE_SHIFT >= size);
         Self {
-            cpu_slub: PerCpu::new(MemCacheCpu::new()),
+            cpu_slub: PerCpu::new(),
             size,
             align,
             ord,
@@ -112,7 +122,7 @@ impl MemCache {
 
         // fast path, alloc from cpu_slub
         let ptr = cpu_slub.try_alloc();
-        if !ptr.is_null()  {
+        if !ptr.is_null() {
             println!("Fast alloc");
             return ptr;
         }
@@ -158,7 +168,7 @@ impl MemCache {
 
     pub fn dealloc(&mut self, ptr: *mut u8, frame: PageFrame) {
         let mut cpu_slub = self.cpu_slub.get();
-        
+
         if cpu_slub.try_dealloc(ptr, frame) {
             println!("Fast dealloc");
             return;
@@ -202,10 +212,10 @@ macro_rules! init_slub {
 
 init_slub!(8, 16, 32, 64, 96, 128, 192, 256, 512, 1024, 2048, 4096, 8192);
 
-pub struct Slub{}
+pub struct Slub {}
 
 #[global_allocator]
-static SLUB_ALLOCATOR: Slub = Slub{};
+static SLUB_ALLOCATOR: Slub = Slub {};
 
 impl Slub {
     fn _alloc(size: usize) -> *mut u8 {
@@ -218,7 +228,9 @@ impl Slub {
             println!("alloc {} from SLUB_{}", size, SLUB_INFO[slub]);
             unsafe { SLUB[slub].alloc() }
         } else {
-            let ord = (align_up!(size, PAGE_SIZE) >> PAGE_SHIFT).next_power_of_two().trailing_zeros() as u16;
+            let ord = (align_up!(size, PAGE_SIZE) >> PAGE_SHIFT)
+                .next_power_of_two()
+                .trailing_zeros() as u16;
 
             println!("alloc {} from BUDDY {}", size, ord);
             if let Some(pages) = alloc_pages(ord as usize) {

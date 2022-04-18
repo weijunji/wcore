@@ -4,6 +4,7 @@
 #![feature(maybe_uninit_extra)]
 #![feature(const_fn_trait_bound)]
 #![feature(default_alloc_error_handler)]
+#![feature(const_trait_impl)]
 
 extern crate alloc;
 
@@ -62,7 +63,7 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
             use alloc::vec::Vec;
             let v = Box::new(5);
             assert_eq!(*v, 5);
-        
+
             let mut vec = Vec::new();
             for i in 0..10000 {
                 vec.push(i);
