@@ -20,7 +20,9 @@ pub fn read_time() -> usize {
 
 #[inline(always)]
 pub fn write_tp(tp: usize) {
-    unsafe { asm!("mv tp, {}", in(reg) tp); }
+    unsafe {
+        asm!("mv tp, {}", in(reg) tp);
+    }
 }
 
 #[inline(always)]

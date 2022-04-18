@@ -42,7 +42,7 @@ impl Into<VirtualAddr> for PageFrame {
 
 pub union SlubData {
     pub objs: u16, // total objs
-    pub ord: u16, // ord of buddy
+    pub ord: u16,  // ord of buddy
 }
 
 pub struct Page {
