@@ -24,13 +24,15 @@ relocated:
     la t0, boot_page_table
     sd zero, 16(t0)
 
-    # only support 16 core
-    li a2, 16
+    # only support 8 core
+    li a2, 8
     bge a0, a2, stop_hart
 
     # load per hart stack
-    la sp, boot_stack_top
-    slli a2, a0, 12
+    la sp, boot_stack
+    li a2, 16384
+    addi a3, a0, 1
+    mul a2, a2, a3
     add sp, sp, a2
 
     tail rust_main
@@ -45,15 +47,10 @@ spin:
     wfi
     j spin
 
-    # use .bss.stack as kernel's stack
-    .section .bss.stack
-    .global boot_stack
+    .section .data
+    .align 4
 boot_stack:
-    # 16 stacks
-    .space 4096 * 16
-    .global boot_stack_top
-boot_stack_top:
-    # endof stack
+    .space 16384*8
 
     .section .data
     .align 12
