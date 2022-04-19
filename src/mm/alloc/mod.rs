@@ -13,7 +13,7 @@ use crate::mm::PageFrame;
 use crate::mm::PhysicalAddr;
 use crate::sync::Spin;
 
-pub static BUDDY: Spin<buddy::Buddy<10>> = Spin::new(buddy::Buddy::new());
+static BUDDY: Spin<buddy::Buddy<10>> = Spin::new(buddy::Buddy::new());
 
 pub fn free_to_buddy(addr: PhysicalAddr, len: usize) {
     println!("Free {:?} {:#x}", addr, len);

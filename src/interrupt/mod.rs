@@ -16,11 +16,14 @@ pub struct Context {
 }
 
 #[no_mangle]
-pub fn interrupt_handler(_context: &mut Context, scause: usize, _stval: usize) {
+pub fn interrupt_handler(context: &mut Context, scause: usize, stval: usize) {
     if scause == 0x8000000000000005 {
         crate::timer::set_next_timeout();
     } else {
-        panic!("Interrupted: {:#x?}", scause);
+        panic!(
+            "Interrupted: {:#x?} stval: {:#x} in {:#x}",
+            scause, stval, context.sepc
+        );
         //_context.sepc += 2;
     }
 }

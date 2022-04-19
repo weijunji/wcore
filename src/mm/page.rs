@@ -58,6 +58,16 @@ pub struct Page {
     pub slub_data: SlubData,
 }
 
+impl Page {
+    pub fn get_frame(&self) -> PageFrame {
+        unsafe {
+            let pages = PAGES.assume_init_mut().as_ptr();
+            let pfn = (self as *const Page).offset_from(pages);
+            PageFrame(pfn as usize)
+        }
+    }
+}
+
 static mut PAGES: MaybeUninit<&'static mut [Page]> = MaybeUninit::uninit();
 
 pub struct Pages {}

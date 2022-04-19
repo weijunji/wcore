@@ -42,6 +42,12 @@ impl LinkedList {
         }
     }
 
+    pub fn swap(&mut self, l: &mut LinkedList) {
+        let tmp = self.head;
+        self.head = l.head;
+        l.head = tmp;
+    }
+
     pub fn iter(&self) -> Iter {
         Iter {
             cur: self.head,
