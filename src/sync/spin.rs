@@ -2,17 +2,18 @@
 //! Lock will turn off interrupt and unlock will resume the
 //! interrupt states before lock.
 
-use core::cell::UnsafeCell;
-use core::hint::spin_loop;
+use core::cell::{Cell, UnsafeCell};
 use core::marker::Sized;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{fence, AtomicBool, Ordering};
 
 use crate::interrupt;
+use crate::proc::hartid;
 
 #[derive(Debug, Default)]
 pub struct Spin<T: ?Sized> {
     locked: AtomicBool,
+    owner: Cell<isize>,
     data: UnsafeCell<T>,
 }
 
@@ -20,6 +21,7 @@ impl<T> Spin<T> {
     pub const fn new(data: T) -> Self {
         Self {
             locked: AtomicBool::new(false),
+            owner: Cell::new(-1),
             data: UnsafeCell::new(data),
         }
     }
@@ -28,10 +30,29 @@ impl<T> Spin<T> {
         let irq = interrupt::intr();
         interrupt::intr_off();
 
-        while self.locked.swap(true, Ordering::Acquire) {
-            spin_loop();
+        if self.locked.load(Ordering::Relaxed) && self.owner.get() == hartid() as isize {
+            panic!(
+                "Spin<{}> already acquired by hart{}",
+                core::any::type_name::<T>(),
+                hartid()
+            );
         }
 
+        while self
+            .locked
+            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_err()
+        {
+            let mut try_count = 0;
+            while self.locked.load(Ordering::Relaxed) {
+                try_count += 1;
+                if try_count == 0x100000 {
+                    panic!("Spin<{}> deadlock detected", core::any::type_name::<T>());
+                }
+            }
+        }
+
+        self.owner.set(hartid() as isize);
         fence(Ordering::SeqCst);
 
         SpinGuard { spin: &self, irq }
@@ -39,10 +60,16 @@ impl<T> Spin<T> {
 
     fn unlock(&self, irq: bool) {
         fence(Ordering::SeqCst);
+
+        self.owner.set(-1);
         self.locked.store(false, Ordering::Release);
         if irq {
             interrupt::intr_on();
         }
+    }
+
+    pub const unsafe fn get(&self) -> *mut T {
+        self.data.get()
     }
 }
 
