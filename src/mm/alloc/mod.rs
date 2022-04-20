@@ -7,7 +7,7 @@ mod slub;
 
 pub use double_linked_list::DoubleLinkedList;
 pub use linked_list::LinkedList;
-pub use slub::{MemCache, Slub};
+pub use slub::MemCache;
 
 use crate::mm::PageFrame;
 use crate::mm::PhysicalAddr;

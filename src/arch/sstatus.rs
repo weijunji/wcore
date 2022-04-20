@@ -2,6 +2,7 @@
 
 use core::arch::asm;
 
+#[allow(dead_code)]
 pub enum SSTATUS {
     /// Previous mode, 1=Supervisor, 0=User
     SPP = 1 << 8,

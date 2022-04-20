@@ -16,6 +16,7 @@ use core::sync::atomic;
 mod arch;
 #[macro_use]
 mod console;
+#[allow(dead_code)]
 mod dtb;
 mod interrupt;
 mod mm;
@@ -59,28 +60,6 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
             STARTED.store(true, atomic::Ordering::Release);
         }
         {
-            use crate::mm::alloc::{alloc_pages, free_pages};
-            let page1 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page1.0);
-            let page2 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page2.0);
-            let page3 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page3.0);
-            let page4 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page4.0);
-
-            free_pages(page1, 0);
-            free_pages(page4, 0);
-
-            let page1 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page1.0);
-            let page2 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page2.0);
-            let page3 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page3.0);
-            let page4 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page4.0);
-
             use alloc::boxed::Box;
             use alloc::vec::Vec;
             let v = Box::new(5);
@@ -110,34 +89,22 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         // From now Percpu is available
         println!("Hart {} boot", hart);
         {
-            use crate::mm::alloc::{alloc_pages, free_pages};
-            let page1 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page1.0);
-            let page2 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page2.0);
-            let page3 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page3.0);
-            let page4 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page4.0);
-
-            free_pages(page1, 0);
-            free_pages(page4, 0);
-
-            let page1 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page1.0);
-            let page2 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page2.0);
-            let page3 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page3.0);
-            let page4 = alloc_pages(0).unwrap();
-            println!("Alloc page {:#x}", page4.0);
-
             use alloc::boxed::Box;
             use alloc::vec::Vec;
             let v = Box::new(5);
             assert_eq!(*v, 5);
             let v2 = Box::new(6);
             assert_eq!(*v2, 6);
+
+            let mut vec = Vec::new();
+            for i in 0..10000 {
+                vec.push(Box::new(i));
+            }
+            assert_eq!(vec.len(), 10000);
+            for (i, value) in vec.into_iter().enumerate() {
+                assert_eq!(*value, i);
+            }
+            println!("heap test passed");
         }
         loop {}
     }

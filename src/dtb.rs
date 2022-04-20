@@ -495,11 +495,9 @@ fn parse_u64(reg: &[u8]) -> u64 {
 }
 
 pub fn init_early(dtb: VirtualAddr) {
-    let dtb = unsafe {
+    unsafe {
         let dtb = Dtb::from_raw(dtb.into());
         FDT.write(dtb);
-
-        FDT.assume_init_read()
     };
 }
 

@@ -7,11 +7,10 @@ use crate::mm::{PAGE_SHIFT, PAGE_SIZE};
 use crate::sync::{PerCpu, Spin};
 
 use core::alloc::{GlobalAlloc, Layout};
-use core::borrow::BorrowMut;
 use core::mem::{size_of, MaybeUninit};
 use core::ops::DerefMut;
 use core::ptr;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::Ordering;
 
 const SLUB_MIN_OBJ: usize = 16;
 const SLUB_MAX_ORD: u16 = 3;
@@ -122,35 +121,33 @@ impl MemCache {
         // fast path, alloc from cpu_slub
         let ptr = cpu_slub.try_alloc();
         if !ptr.is_null() {
-            println!("Fast alloc");
+            // println!("Fast alloc");
             return ptr;
         }
 
         // slow path, alloc from partial
         {
-            // let mut node = self.node.lock();
+            let mut node = self.node.lock();
 
-            // if let Some(p) = node.partial.remove_next() {
-            //     // remove from partial
-            //     node.nr_partial -= 1;
+            if let Some(p) = node.partial.remove_next() {
+                // remove from partial
+                node.nr_partial -= 1;
 
-            //     let page = unsafe{ &mut *from_list_node(p) };
-            //     let mut free = page.freelist.lock();
-            //     cpu_slub.page = Some(page.get_frame());
-            //     // move all free obj to cpu
-            //     assert!(cpu_slub.freelist.empty());
-            //     cpu_slub.freelist.swap(free.deref_mut());
-            //     assert!(!cpu_slub.freelist.empty());
+                let page = unsafe{ &mut *from_list_node(p) };
+                let mut free = page.freelist.lock();
+                cpu_slub.page = Some(page.get_frame());
+                // move all free obj to cpu
+                assert!(cpu_slub.freelist.empty());
+                cpu_slub.freelist.swap(free.deref_mut());
+                assert!(!cpu_slub.freelist.empty());
 
-            //     page.inuse.store(self.nobjs, Ordering::Relaxed);
+                page.inuse.store(self.nobjs, Ordering::Relaxed);
 
-            //     return cpu_slub.freelist.pop().unwrap() as *mut u8;
-            // }
+                return cpu_slub.freelist.pop().unwrap() as *mut u8;
+            }
         }
-        println!("HERE");
         // very slow path, alloc new slub
         if let Some(page) = alloc_pages(self.ord as usize) {
-            println!("HERE1 {:?}", page);
             // init struct page
             unsafe {
                 page.set_head_page(1 << self.ord);
@@ -161,11 +158,6 @@ impl MemCache {
                 page.slub = self_ptr;
                 page.freelist.lock().reset();
                 page.list_node.lock().reset();
-
-                // let pagep = page as *mut Page;
-                // let nodep = page.list_node.lock().deref_mut() as *mut DoubleLinkedList;
-                // let from_node = from_list_node(nodep);
-                // assert!(pagep == from_node);
             }
 
             cpu_slub.page = Some(page);
@@ -178,7 +170,7 @@ impl MemCache {
                 cpu_slub.freelist.push(obj as *mut usize);
             }
 
-            println!("Slow alloc ord-{}", self.ord);
+            // println!("Slow alloc ord-{}", self.ord);
             return cpu_slub.freelist.pop().unwrap() as *mut u8;
         } else {
             return ptr::null_mut();
@@ -203,25 +195,25 @@ impl MemCache {
             }
             let empty = page.inuse.fetch_sub(1, Ordering::Acquire) == 1;
 
-            // if empty {
-            //     // free to buddy
-            //     let mut mnode = self.node.lock();
-            //     if mnode.nr_partial > self.min_partial {
-            //         let mut lnode = page.list_node.lock();
-            //         lnode.remove();
-            //         mnode.nr_partial -= 1;
+            if empty {
+                let mut mnode = self.node.lock();
+                if mnode.nr_partial > self.min_partial {
+                    // free to buddy
+                    let mut lnode = page.list_node.lock();
+                    lnode.remove();
+                    mnode.nr_partial -= 1;
 
-            //         free_pages(frame, page.slub_data.ord as usize);
-            //         println!("Free slub to buddy");
-            //     }
-            // } else if full {
-            //     // add to partial
-            //     let mut mnode = self.node.lock();
-            //     let mut lnode = page.list_node.lock();
-            //     mnode.partial.insert(lnode.deref_mut());
-            //     mnode.nr_partial += 1;
-            //     println!("Add to partial");
-            // }
+                    free_pages(frame, page.slub_data.ord as usize);
+                    // println!("Free slub to buddy");
+                }
+            } else if full {
+                // add to partial
+                let mut mnode = self.node.lock();
+                let mut lnode = page.list_node.lock();
+                mnode.partial.insert(lnode.deref_mut());
+                mnode.nr_partial += 1;
+                // println!("Add to partial");
+            }
         }
     }
 }
@@ -251,7 +243,7 @@ macro_rules! init_slub {
 
 init_slub!(8, 16, 32, 64, 96, 128, 192, 256, 512, 1024, 2048, 4096, 8192);
 
-pub struct Slub {}
+struct Slub {}
 
 #[global_allocator]
 static SLUB_ALLOCATOR: Slub = Slub {};
@@ -263,15 +255,12 @@ impl Slub {
                 Ok(n) => n,
                 Err(n) => n,
             };
-
-            println!("alloc {} from SLUB_{}", size, SLUB_INFO[slub]);
             unsafe { SLUB[slub].alloc() }
         } else {
             let ord = (align_up!(size, PAGE_SIZE) >> PAGE_SHIFT)
                 .next_power_of_two()
                 .trailing_zeros() as u16;
 
-            println!("alloc {} from BUDDY {}", size, ord);
             if let Some(pages) = alloc_pages(ord as usize) {
                 unsafe {
                     pages.set_head_page(1 << ord);
@@ -298,7 +287,7 @@ impl Slub {
             let page = frame.get_page();
 
             if page.slub.is_null() {
-                println!("Dealloc BUDDY {}", page.slub_data.ord);
+                // println!("Dealloc BUDDY {}", page.slub_data.ord);
                 free_pages(addr.page_frame(), page.slub_data.ord as usize);
             } else {
                 let slub = page.slub;

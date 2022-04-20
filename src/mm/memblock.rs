@@ -6,7 +6,6 @@
 //! it is NOT thread safe.
 //!
 
-use core::alloc::Layout;
 use core::fmt::Debug;
 
 use super::{PhysicalAddr, VirtualAddr};
@@ -266,8 +265,6 @@ impl<const N: usize, const M: usize> MemBlock<N, M> {
 
     /// alloc one
     pub fn alloc(&mut self, size: usize) -> VirtualAddr {
-        let found = false;
-        let target = 0;
         match self
             .memory
             .as_slice()

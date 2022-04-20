@@ -26,8 +26,8 @@ impl<const ORDER: usize> Buddy<ORDER> {
     }
 
     pub fn add_free_memory(&mut self, start: PageFrame, end: PageFrame) {
-        let mut start = start.0;
-        let mut end = end.0;
+        let start = start.0;
+        let end = end.0;
 
         assert!(start < end);
 

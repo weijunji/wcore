@@ -1,7 +1,6 @@
 //! Memory subsystem
 
 use core::fmt::{Debug, Error, Formatter};
-use core::mem;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 pub mod alloc;
@@ -140,19 +139,23 @@ impl Debug for VirtualAddr {
 }
 
 #[repr(C)]
+#[allow(dead_code)]
 struct PTE(u64);
 
 #[repr(C)]
+#[allow(dead_code)]
 struct PageTable {
     pud: [PTE; 512],
 }
 
 #[repr(C)]
+#[allow(dead_code)]
 struct PUD {
     pmd: [PTE; 512],
 }
 
 #[repr(C)]
+#[allow(dead_code)]
 struct PMD {
     pte: [PTE; 512],
 }

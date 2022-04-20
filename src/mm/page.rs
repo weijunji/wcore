@@ -1,7 +1,7 @@
 //! Struct for per page
 
 use core::mem::{size_of, MaybeUninit};
-use core::sync::atomic::{AtomicU16, Ordering};
+use core::sync::atomic::AtomicU16;
 
 use crate::sync::Spin;
 
