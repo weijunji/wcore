@@ -15,9 +15,7 @@ macro_rules! NCPU {
     ($n:expr) => {
         const NCPU: usize = $n;
 
-        macro_rules! percpu_arr {
-                                    () => {arr![Default::default(); $n]};
-                                }
+        macro_rules! percpu_arr {() => {arr![Default::default(); $n]};}
     };
 }
 

@@ -133,7 +133,7 @@ impl MemCache {
                 // remove from partial
                 node.nr_partial -= 1;
 
-                let page = unsafe{ &mut *from_list_node(p) };
+                let page = unsafe { &mut *from_list_node(p) };
                 let mut free = page.freelist.lock();
                 cpu_slub.page = Some(page.get_frame());
                 // move all free obj to cpu
