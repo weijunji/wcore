@@ -25,15 +25,15 @@ const PAGE_NUMBER_RANGE: core::ops::Range<usize> = 10..54;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct PTE(u64);
+pub struct PTE(usize);
 
 impl PTE {
     pub fn new(pfn: Option<PageFrame>, mut flags: Flags) -> Self {
         flags.set(Flags::VALID, pfn.is_some());
         Self(
-            *0u64
-                .set_bits(FLAG_RANGE, flags.bits() as u64)
-                .set_bits(PAGE_NUMBER_RANGE, pfn.unwrap_or_default().0 as u64),
+            *0usize
+                .set_bits(FLAG_RANGE, flags.bits() as usize)
+                .set_bits(PAGE_NUMBER_RANGE, pfn.unwrap_or_default().get_ppn()),
         )
     }
 
@@ -73,11 +73,17 @@ impl PTE {
     pub fn update_page_number(&mut self, pfn: Option<PageFrame>) {
         if let Some(pfn) = pfn {
             self.0
-                .set_bits(FLAG_RANGE, (self.get_flags() | Flags::VALID).bits() as u64)
-                .set_bits(PAGE_NUMBER_RANGE, pfn.0 as u64);
+                .set_bits(
+                    FLAG_RANGE,
+                    (self.get_flags() | Flags::VALID).bits() as usize,
+                )
+                .set_bits(PAGE_NUMBER_RANGE, pfn.get_ppn());
         } else {
             self.0
-                .set_bits(FLAG_RANGE, (self.get_flags() - Flags::VALID).bits() as u64)
+                .set_bits(
+                    FLAG_RANGE,
+                    (self.get_flags() - Flags::VALID).bits() as usize,
+                )
                 .set_bits(PAGE_NUMBER_RANGE, 0);
         }
     }

@@ -63,14 +63,24 @@ fn format_dir(
 
         let end_addr = (1usize << (PPN_SIZE * level as usize + PAGE_SHIFT)) - 1 + cur_addr;
         if pte.is_valid() {
+            write!(formatter, "\n")?;
+            for _ in 0..(3 - level) {
+                write!(formatter, "  ")?;
+            }
+
+            let sz = if pte.is_leaf() {
+                match level {
+                    2 => "1G",
+                    1 => "2M",
+                    _ => "",
+                }
+            } else {
+                ""
+            };
             write!(
                 formatter,
-                "{}{:>3} 0x{:0>16x}~0x{:0>16x} - {:#?}",
-                "  ".repeat(3 - level as usize),
-                idx,
-                cur_addr,
-                end_addr,
-                pte
+                "{:>3} 0x{:0>16x}~0x{:0>16x} - {:#?} {}",
+                idx, cur_addr, end_addr, pte, sz
             )?;
 
             if let Some(dir) = pte.next_level() {
@@ -84,7 +94,7 @@ fn format_dir(
 impl core::fmt::Debug for PageTable {
     fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
         if formatter.alternate() {
-            write!(formatter, "PageTable({:#x}):\n", self.as_phys_addr().0)?;
+            write!(formatter, "PageTable({:#x}):", self.as_phys_addr().0)?;
 
             format_dir(formatter, &self.entries, 2, 0)?;
 

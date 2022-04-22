@@ -170,6 +170,4 @@ pub fn init_early() {
     unsafe {
         memblock::MEM_BLOCK.free_all(alloc::free_to_buddy);
     }
-
-    // Init slub
 }

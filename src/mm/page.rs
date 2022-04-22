@@ -32,6 +32,10 @@ impl PageFrame {
         let pfn = page.head_page;
         PageFrame(pfn)
     }
+
+    pub fn get_ppn(&self) -> usize {
+        self.0 + (MEMORY_OFFSET >> PAGE_SHIFT)
+    }
 }
 
 impl Into<VirtualAddr> for PageFrame {
