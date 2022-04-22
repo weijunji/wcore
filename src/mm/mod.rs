@@ -4,6 +4,8 @@ use core::fmt::{Debug, Error, Formatter};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 pub mod alloc;
+#[allow(dead_code)]
+pub mod mapping;
 pub mod memblock;
 pub mod page;
 
@@ -115,8 +117,8 @@ impl VirtualAddr {
         PageFrame(pfn)
     }
 
-    pub fn as_ptr(self) -> *mut usize {
-        self.0 as *mut usize
+    pub fn as_ptr<T>(self) -> *mut T {
+        self.0 as *mut T
     }
 }
 
@@ -138,36 +140,20 @@ impl Debug for VirtualAddr {
     }
 }
 
-#[repr(C)]
-#[allow(dead_code)]
-struct PTE(u64);
-
-#[repr(C)]
-#[allow(dead_code)]
-struct PageTable {
-    pud: [PTE; 512],
-}
-
-#[repr(C)]
-#[allow(dead_code)]
-struct PUD {
-    pmd: [PTE; 512],
-}
-
-#[repr(C)]
-#[allow(dead_code)]
-struct PMD {
-    pte: [PTE; 512],
-}
-
 extern "C" {
     fn kernel_end();
+    fn boot_page_table();
 }
 
 pub fn init_early() {
     let (mem, len) = crate::dtb::get_memory();
     println!("Memory {:?} len {:#x} npage {}", mem, len, len >> 12);
     println!("Kernel end {:#x}", kernel_end as usize - PAGE_OFF);
+
+    let pt = boot_page_table as usize as *const mapping::pagetable::PageTable;
+    let pt = unsafe { &*pt };
+    println!("{:#?}", pt);
+
     // Init memblock
     unsafe {
         memblock::MEM_BLOCK.add(mem, len);

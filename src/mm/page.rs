@@ -8,7 +8,7 @@ use crate::sync::Spin;
 use super::*;
 
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct PageFrame(pub usize);
 
 impl PageFrame {

@@ -53,6 +53,7 @@ boot_stack:
     .space 16384*8
 
     .section .data
+    .globl boot_page_table
     .align 12
 boot_page_table:
     .quad 0
