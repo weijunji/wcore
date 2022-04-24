@@ -1,5 +1,6 @@
 //! Struct for per page
 
+use core::iter::Step;
 use core::mem::{size_of, MaybeUninit};
 use core::sync::atomic::AtomicU16;
 
@@ -7,40 +8,65 @@ use crate::sync::Spin;
 
 use super::*;
 
+const PAGE_FRAME_OFFSET: usize = MEMORY_OFFSET >> PAGE_SHIFT;
+
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct PageFrame(pub usize);
+pub struct PageFrame(usize);
 
 impl PageFrame {
+    pub fn new(pfn: usize) -> Self {
+        Self(pfn)
+    }
+
     pub unsafe fn get_page(&self) -> &'static mut Page {
-        let pfn = self.0;
+        let idx = self.0 - PAGE_FRAME_OFFSET;
         let pages = PAGES.assume_init_mut();
-        pages.get_mut(pfn).unwrap()
+        pages.get_mut(idx).unwrap()
     }
 
     pub unsafe fn set_head_page(&self, npages: usize) {
         let pages = PAGES.assume_init_mut();
-        for pfn in self.0..(self.0 + npages) {
-            let page = pages.get_mut(pfn).unwrap();
+        let idx = self.0 - PAGE_FRAME_OFFSET;
+        for n in idx..(idx + npages) {
+            let page = pages.get_mut(n).unwrap();
             page.head_page = self.0;
         }
     }
 
     pub unsafe fn get_head_page(&self) -> PageFrame {
         let pages = PAGES.assume_init_mut();
-        let page = pages.get_mut(self.0).unwrap();
+        let page = pages.get_mut(self.0 - PAGE_FRAME_OFFSET).unwrap();
         let pfn = page.head_page;
         PageFrame(pfn)
     }
 
     pub fn get_ppn(&self) -> usize {
-        self.0 + (MEMORY_OFFSET >> PAGE_SHIFT)
+        self.0
     }
 }
 
 impl Into<VirtualAddr> for PageFrame {
     fn into(self) -> VirtualAddr {
-        VirtualAddr::new(self.0.checked_shl(12).unwrap() + PAGE_OFF + MEMORY_OFFSET)
+        VirtualAddr::new(self.0.checked_shl(12).unwrap() + PAGE_OFF)
+    }
+}
+
+impl Step for PageFrame {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        if start.0 <= end.0 {
+            Some(end.0 - start.0)
+        } else {
+            None
+        }
+    }
+
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        start.0.checked_add(count).map(|n| Self(n))
+    }
+
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        start.0.checked_sub(count).map(|n| Self(n))
     }
 }
 

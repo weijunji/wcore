@@ -35,16 +35,16 @@ impl PhysicalAddr {
     }
 
     pub fn page_frame(&self) -> PageFrame {
-        let pfn = (self.0 - MEMORY_OFFSET) >> PAGE_SHIFT;
-        PageFrame(pfn)
+        let pfn = self.0 >> PAGE_SHIFT;
+        PageFrame::new(pfn)
     }
 
     pub fn next_page_frame(&self) -> PageFrame {
-        let pfn = (self.0 - MEMORY_OFFSET) >> PAGE_SHIFT;
+        let pfn = self.0 >> PAGE_SHIFT;
         if self.0 & PAGE_MASK == 0 {
-            PageFrame(pfn)
+            PageFrame::new(pfn)
         } else {
-            PageFrame(pfn + 1)
+            PageFrame::new(pfn + 1)
         }
     }
 }
@@ -113,8 +113,13 @@ impl VirtualAddr {
     }
 
     pub fn page_frame(&self) -> PageFrame {
-        let pfn = (self.0 - PAGE_OFF - MEMORY_OFFSET) >> PAGE_SHIFT;
-        PageFrame(pfn)
+        let pfn = (self.0 - PAGE_OFF) >> PAGE_SHIFT;
+        PageFrame::new(pfn)
+    }
+
+    pub fn page_frame_round_up(&self) -> PageFrame {
+        let pfn = align_up!(self.0 - PAGE_OFF, PAGE_SIZE);
+        PageFrame::new(pfn)
     }
 
     pub fn as_ptr<T>(self) -> *mut T {

@@ -42,7 +42,7 @@ impl MemCacheCpu {
 
     fn try_dealloc(&mut self, ptr: *mut u8, page: PageFrame) -> bool {
         if let Some(f) = self.page {
-            if f.0 == page.0 {
+            if f == page {
                 self.freelist.push(ptr as *mut usize);
                 return true;
             }

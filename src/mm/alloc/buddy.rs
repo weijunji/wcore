@@ -26,20 +26,20 @@ impl<const ORDER: usize> Buddy<ORDER> {
     }
 
     pub fn add_free_memory(&mut self, start: PageFrame, end: PageFrame) {
-        let start = start.0;
-        let end = end.0;
+        let start = start.get_ppn();
+        let end = end.get_ppn();
 
         assert!(start < end);
 
         let mut cur_start = start;
-        while cur_start + size_of::<usize>() <= end {
+        while cur_start < end {
             let size = cur_start & (!cur_start + 1);
             let size = min(size, prev_power_of_two!(end - cur_start));
 
             let ord = size.trailing_zeros() as usize;
             let ord = min(ord, self.free_list.len() - 1);
 
-            let addr: VirtualAddr = PageFrame(cur_start).into();
+            let addr: VirtualAddr = PageFrame::new(cur_start).into();
             let addr: usize = addr.into();
             self.free_list[ord as usize].push(addr as *mut usize);
             cur_start += 1 << (ord);

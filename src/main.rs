@@ -6,6 +6,7 @@
 #![feature(default_alloc_error_handler)]
 #![feature(const_trait_impl)]
 #![feature(new_uninit)]
+#![feature(step_trait)]
 
 extern crate alloc;
 
