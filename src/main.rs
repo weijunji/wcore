@@ -14,6 +14,9 @@ use core::arch::global_asm;
 use core::hint;
 use core::sync::atomic;
 
+#[macro_use]
+mod macros;
+
 mod arch;
 #[macro_use]
 mod console;

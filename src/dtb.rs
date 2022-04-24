@@ -24,18 +24,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use core::{cmp, mem, slice, str};
 
-macro_rules! align_down {
-    ($value:expr, $alignment:expr) => {
-        $value & !($alignment - 1)
-    };
-}
-
-macro_rules! align_up {
-    ($value:expr, $alignment:expr) => {
-        align_down!($value + ($alignment - 1), $alignment)
-    };
-}
-
 /// Get the length of a C-style null-terminated byte string,
 /// which is part of a larger slice.
 /// The latter requirement makes this function safe to use.

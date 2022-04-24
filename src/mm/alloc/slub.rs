@@ -79,12 +79,6 @@ pub struct MemCache {
     min_partial: usize,
 }
 
-macro_rules! align_up {
-    ($size: expr, $align: expr) => {{
-        ($size + $align - 1) & (!$align + 1)
-    }};
-}
-
 pub unsafe fn from_list_node(ln: *mut DoubleLinkedList) -> *mut Page {
     let val: MaybeUninit<Page> = MaybeUninit::uninit();
     let p = val.as_ptr();
