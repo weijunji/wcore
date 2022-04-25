@@ -8,11 +8,14 @@ use crate::sbi::shutdown;
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
     // TODO: unwind the stack
-    println!(
-        "\x1b[1;31mpanic: '{}' in {}\x1b[0m",
-        info.message().unwrap(),
-        info.location().unwrap()
-    );
+    unsafe {
+        // use no lock to avoid deadlock in format
+        println_no_lock!(
+            "\x1b[1;31mpanic: '{}' in {}\x1b[0m",
+            info.message().unwrap(),
+            info.location().unwrap()
+        );
+    }
     shutdown()
 }
 

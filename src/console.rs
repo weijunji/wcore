@@ -37,6 +37,10 @@ pub fn print(args: fmt::Arguments) {
     STDOUT.lock().write_fmt(args).unwrap();
 }
 
+pub unsafe fn print_no_lock(args: fmt::Arguments) {
+    Stdout.write_fmt(args).unwrap();
+}
+
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {
@@ -48,5 +52,12 @@ macro_rules! print {
 macro_rules! println {
     ($fmt: literal $(, $($arg: tt)+)?) => {
         $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
+    }
+}
+
+#[macro_export]
+macro_rules! println_no_lock {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::console::print_no_lock(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
     }
 }
