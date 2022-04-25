@@ -44,11 +44,25 @@ impl PageFrame {
     pub fn get_ppn(&self) -> usize {
         self.0
     }
+
+    pub fn next(&self) -> Self {
+        PageFrame(self.0 + 1)
+    }
+
+    fn va(&self) -> usize {
+        self.0.checked_shl(12).unwrap() + PAGE_OFF
+    }
+
+    pub unsafe fn clear(&self, ord: usize) {
+        let len = 1 << ord << PAGE_SHIFT;
+        let va = self.va() as *mut u8;
+        va.write_bytes(0, len);
+    }
 }
 
 impl Into<VirtualAddr> for PageFrame {
     fn into(self) -> VirtualAddr {
-        VirtualAddr::new(self.0.checked_shl(12).unwrap() + PAGE_OFF)
+        VirtualAddr::new(self.va())
     }
 }
 

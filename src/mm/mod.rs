@@ -118,7 +118,7 @@ impl VirtualAddr {
     }
 
     pub fn page_frame_round_up(&self) -> PageFrame {
-        let pfn = align_up!(self.0 - PAGE_OFF, PAGE_SIZE);
+        let pfn = align_up!(self.0 - PAGE_OFF, PAGE_SIZE) >> PAGE_SHIFT;
         PageFrame::new(pfn)
     }
 
@@ -142,6 +142,42 @@ impl Into<usize> for VirtualAddr {
 impl Debug for VirtualAddr {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         fmt.write_fmt(format_args!("VA({:#x})", self.0))
+    }
+}
+
+impl Add<usize> for VirtualAddr {
+    type Output = Self;
+
+    fn add(self, other: usize) -> Self::Output {
+        Self(self.0 + other)
+    }
+}
+
+impl AddAssign<usize> for VirtualAddr {
+    fn add_assign(&mut self, other: usize) {
+        self.0 += other
+    }
+}
+
+impl Sub<usize> for VirtualAddr {
+    type Output = Self;
+
+    fn sub(self, other: usize) -> Self::Output {
+        Self(self.0 - other)
+    }
+}
+
+impl Sub for VirtualAddr {
+    type Output = usize;
+
+    fn sub(self, other: VirtualAddr) -> Self::Output {
+        self.0 - other.0
+    }
+}
+
+impl SubAssign<usize> for VirtualAddr {
+    fn sub_assign(&mut self, other: usize) {
+        self.0 -= other
     }
 }
 
@@ -175,4 +211,6 @@ pub fn init_early() {
     unsafe {
         memblock::MEM_BLOCK.free_all(alloc::free_to_buddy);
     }
+
+    mapping::init();
 }

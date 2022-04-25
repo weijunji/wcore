@@ -28,6 +28,10 @@ const PAGE_NUMBER_RANGE: core::ops::Range<usize> = 10..54;
 pub struct PTE(usize);
 
 impl PTE {
+    pub const fn new_zeroed() -> Self {
+        Self(0)
+    }
+
     pub fn new(pfn: Option<PageFrame>, mut flags: Flags) -> Self {
         flags.set(Flags::VALID, pfn.is_some());
         Self(
@@ -63,14 +67,19 @@ impl PTE {
     }
 
     fn get_page_frame_unchecked(&self) -> PageFrame {
-        PageFrame(self.0.get_bits(PAGE_NUMBER_RANGE) as usize)
+        PageFrame::new(self.0.get_bits(PAGE_NUMBER_RANGE) as usize)
     }
 
     pub fn get_flags(&self) -> Flags {
         unsafe { Flags::from_bits_unchecked(self.0.get_bits(FLAG_RANGE) as u8) }
     }
 
-    pub fn update_page_number(&mut self, pfn: Option<PageFrame>) {
+    pub fn clear(&mut self) -> &mut Self {
+        self.0 = 0;
+        self
+    }
+
+    pub fn update_page_number(&mut self, pfn: Option<PageFrame>) -> &mut Self {
         if let Some(pfn) = pfn {
             self.0
                 .set_bits(
@@ -86,28 +95,26 @@ impl PTE {
                 )
                 .set_bits(PAGE_NUMBER_RANGE, 0);
         }
+        self
     }
 
-    pub fn next_level_mut(&self) -> Option<&mut [PTE]> {
+    pub fn set_page_number(&mut self, pfn: PageFrame) -> &mut Self {
+        self.0.set_bits(PAGE_NUMBER_RANGE, pfn.get_ppn());
+        self
+    }
+
+    // Set pte's flags, which will set VALID
+    pub fn set_flags(&mut self, flags: Flags) -> &mut Self {
+        self.0
+            .set_bits(FLAG_RANGE, (flags | Flags::VALID).bits() as usize);
+        self
+    }
+
+    pub fn next_level(&self) -> Option<&'static mut [PTE; 512]> {
         if self.is_dir() {
             let pf = self.get_page_frame_unchecked();
             let va: VirtualAddr = pf.into();
-            unsafe {
-                Some(core::slice::from_raw_parts_mut(
-                    va.as_ptr() as *mut PTE,
-                    512,
-                ))
-            }
-        } else {
-            None
-        }
-    }
-
-    pub fn next_level(&self) -> Option<&[PTE]> {
-        if self.is_dir() {
-            let pf = self.get_page_frame_unchecked();
-            let va: VirtualAddr = pf.into();
-            unsafe { Some(core::slice::from_raw_parts(va.as_ptr() as *const PTE, 512)) }
+            unsafe { Some(&mut *va.as_ptr() as &mut [_; 512]) }
         } else {
             None
         }
@@ -134,7 +141,7 @@ impl core::fmt::Debug for PTE {
             write!(
                 formatter,
                 "{:#x} ",
-                self.get_page_frame_unchecked().0 << PAGE_SHIFT
+                self.get_page_frame_unchecked().get_ppn() << PAGE_SHIFT
             )?;
             let flags = self.get_flags();
             write_flags_bit(formatter, flags, Flags::DIRTY, 'D')?;
