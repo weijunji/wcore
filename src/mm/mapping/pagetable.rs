@@ -2,6 +2,7 @@
 
 use alloc::boxed::Box;
 use bit_field::BitField;
+use core::arch::asm;
 use core::ops::Range;
 use core::panic;
 
@@ -86,8 +87,8 @@ impl PageTable {
 
     /// map a physical address `pa` to pagetable's virtual address `va` with `flags`
     pub fn map(&mut self, pa: PhysicalAddr, va: VirtualAddr, sz: usize, flags: Flags) {
-        let start = va.page_frame();
-        let end = (va + sz).page_frame_round_up();
+        let start = va.virtual_page_frame();
+        let end = (va + sz).virtual_page_frame_round_up();
 
         let mut ppf = pa.page_frame();
 
@@ -102,6 +103,54 @@ impl PageTable {
         }
     }
 
+    pub fn map_kernel(&mut self) {
+        extern "C" {
+            fn text_start();
+            fn rodata_start();
+            fn data_start();
+            fn bss_start();
+            fn kernel_end();
+        }
+        let text_start = VirtualAddr(text_start as usize);
+        let rodata_start = VirtualAddr(rodata_start as usize);
+        let data_start = VirtualAddr(data_start as usize);
+        let bss_start = VirtualAddr(bss_start as usize);
+        let kernel_end = VirtualAddr(kernel_end as usize);
+        let mem_end = unsafe { crate::mm::MEMORY_END };
+        let mem_end: VirtualAddr = mem_end.into();
+
+        self.map(
+            text_start.into(),
+            text_start,
+            rodata_start - text_start,
+            Flags::READABLE | Flags::EXECUTABLE,
+        );
+        self.map(
+            rodata_start.into(),
+            rodata_start,
+            data_start - rodata_start,
+            Flags::READABLE,
+        );
+        self.map(
+            data_start.into(),
+            data_start,
+            bss_start - data_start,
+            Flags::READABLE | Flags::WRITABLE,
+        );
+        self.map(
+            bss_start.into(),
+            bss_start,
+            kernel_end - bss_start,
+            Flags::READABLE | Flags::WRITABLE,
+        );
+        self.map(
+            kernel_end.into(),
+            kernel_end,
+            mem_end - kernel_end,
+            Flags::READABLE | Flags::WRITABLE,
+        );
+    }
+
     /// get pagetable's physical address
     fn as_phys_addr(&self) -> PhysicalAddr {
         VirtualAddr(self.entries.as_ptr() as usize).into()
@@ -113,6 +162,16 @@ impl PageTable {
         satp.set_bits(SATP_MODE_RANGE, 8);
         satp.set_bits(SATP_PPN_RANGE, self.as_phys_addr().page_frame().get_ppn());
         satp
+    }
+
+    pub(super) fn load(&self) {
+        let addr = self.as_sv39();
+        unsafe {
+            asm!("
+                csrw satp, {}
+                sfence.vma
+            ", in(reg) addr);
+        }
     }
 }
 
@@ -128,7 +187,7 @@ fn format_dir(
     for (idx, pte) in ptes.iter().enumerate() {
         let mut cur_addr = addr | (idx << (PPN_SIZE * level as usize + PAGE_SHIFT));
         // highest bit was 1, extend it
-        if level == 2 && cur_addr > 255 {
+        if level == 2 && idx > 255 {
             cur_addr |= 0xffff_ffc0_0000_0000;
         }
 
@@ -150,7 +209,7 @@ fn format_dir(
             };
             write!(
                 formatter,
-                "{:>3} 0x{:0>16x}~0x{:0>16x} - {:#?} {}",
+                "{:0>3} 0x{:0>16x}~0x{:0>16x} - {:#?} {}",
                 idx, cur_addr, end_addr, pte, sz
             )?;
 

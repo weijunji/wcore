@@ -37,15 +37,9 @@ impl PageFrame {
     }
 }
 
-pub(super) fn init() {
+pub(super) fn init_early() {
     unsafe {
-        KERNEL_PAGETABLE.map(
-            PhysicalAddr(0x8000_0000),
-            VirtualAddr(0xffffffc0_80000000),
-            4096 * 5,
-            Flags::READABLE,
-        );
-        println!("{:#?}", KERNEL_PAGETABLE);
+        KERNEL_PAGETABLE.map_kernel();
     }
 
     {
@@ -57,5 +51,11 @@ pub(super) fn init() {
             Flags::READABLE,
         );
         println!("{:#?}", pagetable);
+    }
+}
+
+pub(super) fn init() {
+    unsafe {
+        KERNEL_PAGETABLE.load();
     }
 }

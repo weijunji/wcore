@@ -117,8 +117,17 @@ impl VirtualAddr {
         PageFrame::new(pfn)
     }
 
+    pub fn virtual_page_frame(&self) -> PageFrame {
+        PageFrame::new(self.0 >> PAGE_SHIFT)
+    }
+
     pub fn page_frame_round_up(&self) -> PageFrame {
         let pfn = align_up!(self.0 - PAGE_OFF, PAGE_SIZE) >> PAGE_SHIFT;
+        PageFrame::new(pfn)
+    }
+
+    pub fn virtual_page_frame_round_up(&self) -> PageFrame {
+        let pfn = align_up!(self.0, PAGE_SIZE) >> PAGE_SHIFT;
         PageFrame::new(pfn)
     }
 
@@ -186,8 +195,13 @@ extern "C" {
     fn boot_page_table();
 }
 
+static mut MEMORY_END: PhysicalAddr = PhysicalAddr(0);
+
 pub fn init_early() {
     let (mem, len) = crate::dtb::get_memory();
+    unsafe {
+        MEMORY_END = mem + len;
+    }
     println!("Memory {:?} len {:#x} npage {}", mem, len, len >> 12);
     println!("Kernel end {:#x}", kernel_end as usize - PAGE_OFF);
 
@@ -212,5 +226,9 @@ pub fn init_early() {
         memblock::MEM_BLOCK.free_all(alloc::free_to_buddy);
     }
 
+    mapping::init_early();
+}
+
+pub(super) fn init() {
     mapping::init();
 }

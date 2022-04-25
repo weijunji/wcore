@@ -61,6 +61,8 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         mm::init_early();
         // From now alloc is available
 
+        mm::init();
+
         unsafe {
             STARTED.store(true, atomic::Ordering::Release);
         }
@@ -93,6 +95,9 @@ pub extern "C" fn rust_main(hart: usize, dtb: usize) -> ! {
         proc::init(hart);
         // From now Percpu is available
         println!("Hart {} boot", hart);
+
+        mm::init();
+
         {
             use alloc::boxed::Box;
             use alloc::vec::Vec;
