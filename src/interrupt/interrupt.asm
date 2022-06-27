@@ -55,6 +55,7 @@ __interrupt:
     .globl __restore
 # exit interrupt handle, restore context, jump to sepc
 __restore:
+    mv      sp, a0
     LOAD    s1, 32
     LOAD    s2, 33
     csrw    sstatus, s1

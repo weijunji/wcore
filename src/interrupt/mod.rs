@@ -16,7 +16,7 @@ pub struct Context {
 }
 
 #[no_mangle]
-pub fn interrupt_handler(context: &mut Context, scause: usize, stval: usize) {
+pub fn interrupt_handler(context: &mut Context, scause: usize, stval: usize) -> &mut Context {
     if scause == 0x8000000000000005 {
         crate::timer::set_next_timeout();
     } else {
@@ -26,6 +26,7 @@ pub fn interrupt_handler(context: &mut Context, scause: usize, stval: usize) {
         );
         //_context.sepc += 2;
     }
+    context
 }
 
 #[inline]
